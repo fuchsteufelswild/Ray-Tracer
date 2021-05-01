@@ -13,7 +13,7 @@
 #include "tinyxml2.h"
 #include "happly.h"
 #include "Texture.h"
-#include "TMO.h"
+#include "Tonemapper.h"
 #include "brdf.h"
 // #include <future>
 #include <thread>
@@ -31,6 +31,25 @@ int Primitive::id = 0;
 int Scene::debugBegin = -1;
 int Scene::debugEnd = -1;
 int Scene::debugCurrent = 0;
+
+std::vector<Camera*>& Scene::GetAllCameras()
+{
+    return cameras;
+}
+
+Scene::Scene()
+{
+    tmo = nullptr;
+
+    sceneRandom = Random<double>{};
+
+    Scene::pScene = this;
+
+    maxRecursionDepth = 0; // Default recursion depth
+    shadowRayEps = 0.005;  // Default shadow ray epsilon
+    intTestEps = 0.0001;
+}
+
 
 // Returns fresnel value for the given intersection point and a ray
 // Side-effects are the change of the surface normal and flag that
@@ -261,7 +280,7 @@ void Scene::CalculateLight(Ray &r, Vector3f &outColor, int depth, float ctw, flo
             outColor += light->GetLightIntensity() / (distanceToLight * distanceToLight) * brdfValue;
         }
         else if(tmo)
-            outColor += light->ResultingColorContribution(intersection, viewerDirection, intersection.tex1, tmo->gamma); // Add the light contribution
+            outColor += light->ResultingColorContribution(intersection, viewerDirection, intersection.tex1, tmo->GetGamma()); // Add the light contribution
         else
             outColor += light->ResultingColorContribution(intersection, viewerDirection, intersection.tex1); // Add the light contribution
 
@@ -481,26 +500,13 @@ void Scene::RenderScene(void)
         if(tmo)
         {
             // std::cout << "TONEMAPPING EXISTS\n";
-            std::vector<Vector3f> outVector;
-            tmo->ComputeTonemappedArray(inVector, outVector);
 
-            float* f = new float[img.width * img.height * 3];
-
-            for(int i = 0;  i < img.height; i++)
-            {
-                for(int j = 0; j < img.width; j++)
-                {
-                    f[(i * img.width + j) * 3] = outVector[i * img.width + j].x;
-                    f[(i * img.width + j) * 3 + 1] = outVector[i * img.width + j].y;
-                    f[(i * img.width + j) * 3 + 2] = outVector[i * img.width + j].z;
-                }
-            }
-
-            tmo->SaveEXR(f, img.width, img.height, cam->imageName);
+            float* f = tmo->Tonemap(img);
+            tmo->SaveEXR(f, img.GetImageWidth(), img.GetImageHeight(), cam->imageName);
         }
         else
         {
-            img.SaveImage(cam->imageName); // Save the resulting image
+            img.SaveImageAsPPM(cam->imageName); // Save the resulting image
         }
         
         inVector.erase(inVector.begin(), inVector.end());
@@ -726,7 +732,7 @@ Scene::Scene(const char *xmlPath)
             toneElement = camElement->FirstChildElement("Gamma");
             toneElement->QueryFloatText(&gamma);
 
-            tmo = new TMO(key, burn, saturation, gamma);
+            tmo = new Tonemapper(key, burn, saturation, gamma);
         }
 
         cameras.push_back(new Camera(id, imageName, pos, gaze, up, imgPlane, numSamples, focalDistance, apertureSize));
@@ -1096,7 +1102,7 @@ Scene::Scene(const char *xmlPath)
 
                     if(imagePaths[imageID - 1].back() == 'r')
                     {
-                        TMOData out = TMO::ReadExr(imagePaths[imageID - 1]);
+                        TMOData out = Tonemapper::ReadExr(imagePaths[imageID - 1]);
                         textures.push_back(new ImageTexture(imagePaths[imageID - 1], id, decalMode, bumpFactor, itype, normalizer, out.data));
                         textures.back()->width = out.width;
                         textures.back()->height = out.height;
@@ -1757,7 +1763,7 @@ Scene::Scene(const char *xmlPath)
 
         if (imagePaths[imID - 1].back() == 'r')
         {
-            TMOData dat = TMO::ReadExr(imagePaths[imID - 1]);
+            TMOData dat = Tonemapper::ReadExr(imagePaths[imID - 1]);
             tex = new ImageTexture(imagePaths[imID - 1], 2, Texture::DecalMode::BLEND_KD, 1, ImageTexture::InterpolationType::NEAREST, 1, dat.data);
             tex->width = dat.width;
             tex->height = dat.height;

@@ -31,13 +31,34 @@ class Image
 {
 public:
     Color **data; // Image data
-    int width;    // Image width
-    int height;   // Image height
+    int mImageWidth;
+    int mImageHeight;
 
-    Image(int width, int height);                             // Constructor
-    void SetPixelValue(int col, int row, const Color &color); // Sets the value of the pixel at the given column and row
-    void SaveImage(const char *imageName) const;              // Takes the image name as a file and saves it as a ppm file.
+public:
+    Image(int width, int height);                             
+    void SetPixelValue(int col, int row, const Color &color); 
+    Color GetPixelValue(int col, int row) const;
+    void SaveImageAsPPM(const char *imageName) const;
+public:
+    int GetImageWidth() const;
+    int GetImageHeight() const;
+    int GetImageSize() const;
 };
+
+inline int Image::GetImageWidth() const
+{
+    return mImageWidth;
+}
+
+inline int Image::GetImageHeight() const
+{
+    return mImageWidth;
+}
+
+inline int Image::GetImageSize() const
+{
+    return mImageWidth * mImageHeight;
+}
 
 }
 #endif

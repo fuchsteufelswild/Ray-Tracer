@@ -1,8 +1,9 @@
 #include "Image.h"
 
 namespace actracer {
+
 Image::Image(int width, int height)
-    : width(width), height(height)
+    : mImageWidth(width), mImageHeight(height)
 {
     data = new Color *[height];
 
@@ -12,25 +13,28 @@ Image::Image(int width, int height)
     }
 }
 
-// Set the value of the pixel at the given column and row
+Color Image::GetPixelValue(int col, int row) const
+{
+    return data[row][col];
+}
+
 void Image::SetPixelValue(int col, int row, const Color &color)
 {
     data[row][col] = color;
 }
 
-// Takes the image name as a file and saves it as a ppm file.
-void Image::SaveImage(const char *imageName) const
+void Image::SaveImageAsPPM(const char *imageName) const
 {
     FILE *output;
 
     output = fopen(imageName, "w");
     fprintf(output, "P3\n");
-    fprintf(output, "%d %d\n", width, height);
+    fprintf(output, "%d %d\n", mImageWidth, mImageHeight);
     fprintf(output, "255\n");
 
-    for (int y = 0; y < height; y++)
+    for (int y = 0; y < mImageHeight; y++)
     {
-        for (int x = 0; x < width; x++)
+        for (int x = 0; x < mImageWidth; x++)
         {
             for (int c = 0; c < 3; ++c)
             {

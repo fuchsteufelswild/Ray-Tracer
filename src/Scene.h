@@ -16,6 +16,7 @@
 
 namespace actracer {
 
+class RenderStrategy;
 class Camera;
 class Light;
 class Material;
@@ -23,14 +24,18 @@ class Material;
 class Image;
 class Primitive;
 class BVHTree;
-class TMO;
+class Tonemapper;
 class BRDFBase;
 union Color;
 
-
 class Scene {
+friend class SceneParser;
+
 private:
-    TMO* tmo;
+    RenderStrategy* mRenderStrategy;
+
+private:
+    Tonemapper *tmo;
     Material* defMat; // Default material ( air )
 
     Texture* bgTexture;
@@ -78,9 +83,13 @@ public:
 
     BVHTree* accelerator;
 
+    Scene();
     Scene(const char *xmlPath); // Constructor. Parses XML file and initializes vectors above
 
     void RenderScene(void); // Method to render scene, an image is created for each camera in the scene
+public:
+    std::vector<Camera*>& GetAllCameras();
+
 private:
     void RenderCam(Camera *cam, Image &img, int iStart, int iEnd);     // Render the scene for camera
     Color RenderPixel(Ray &ray, float ctw = 0.0f, float rth = 0.0f);   // Calculate the color of a pixel
