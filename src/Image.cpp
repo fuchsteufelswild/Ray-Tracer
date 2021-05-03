@@ -13,12 +13,12 @@ Image::Image(int width, int height)
     }
 }
 
-Color Image::GetPixelValue(int col, int row) const
+Color Image::GetPixelColor(int col, int row) const
 {
     return data[row][col];
 }
 
-void Image::SetPixelValue(int col, int row, const Color &color)
+void Image::SetPixelColor(int col, int row, const Color &color)
 {
     data[row][col] = color;
 }

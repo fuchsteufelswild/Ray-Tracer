@@ -56,14 +56,16 @@ private:
     float focusDistance; // Focal distance
     float apertureSize; // Aperture size
 
-    Random<double> camRandom;
-    Random<double> rayRandomX;
-    Random<double> rayRandomY;
+    mutable Random<double> camRandom;
+    mutable Random<double> rayRandomX;
+    mutable Random<double> rayRandomY;
 
     unsigned camSeed;
     std::default_random_engine camGenerator;
     std::uniform_real_distribution<double> camDistribution;
 
+public:
+    static void DeriveBoundaries(float fov, float a, const Vector3f &gazePoint, const Vector3f &pos, float d, float &l, float &r, float &b, float &t, Vector3f &camGaze);
 public:
     char imageName[64]; // Target file name
     int id;
@@ -72,15 +74,41 @@ public:
     Camera(int id, const char *imageName, const Vector3f &pos, const Vector3f &gaze, const Vector3f &up, const ImagePlane &imgPlane, int numberOfSamples = 1, float focalDistance = 0.0f, float apertSize = 0.0f);
 
     Ray GenerateRay(int row, int col) const; // Generates the ray going through pixel (row, col)
-    Ray GenerateRayFromPixelSample(const Pixel& px, int id, PixelSample& pxs); // Generate pixel sample from pixel with given id
+    Ray GenerateRayFromPixelSample(const Pixel& px, int id, PixelSample& pxs) const; // Generate pixel sample from pixel with given id
     Pixel GenerateSampleForPixel(int row, int col) const; // Generates a pixel
 
-    inline int GetID() const { return m_Id; }
-    inline int GetSampleCount() const { return nSamples; }
-
+    bool IsMultiSamplingOn() const;
 public:
-    static void DeriveBoundaries(float fov, float a, const Vector3f &gazePoint, const Vector3f& pos, float d, float &l, float &r, float &b, float &t, Vector3f &camGaze);
+    int GetID() const;
+    int GetSampleCount() const;
+    const char* GetImageName() const;
+private:
+    float CalculateHorizontalOffsetOnImagePlane(int col) const;
+    float CalculateVerticalOffsetOnImagePlane(int row) const;
+
+    void SetImageName(const char *imageName);
+    void SetupCameraCoordinateAxes();
 };
+
+inline int Camera::GetID() const 
+{
+    return m_Id;
+}
+
+inline int Camera::GetSampleCount() const
+{ 
+     return nSamples; 
+}
+
+inline const char* Camera::GetImageName() const
+{
+    return imageName;
+}
+
+inline bool Camera::IsMultiSamplingOn() const
+{
+    return nSamples > 1;
+}
 
 }
 #endif

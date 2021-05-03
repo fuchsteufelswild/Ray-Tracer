@@ -32,6 +32,9 @@ public:
         IMAGE
     };
 
+public:
+    
+
 protected:
     
     
@@ -54,13 +57,13 @@ protected:
     Texture(int id, DecalMode dm, float bumpFactor, int normalizer);
     Texture();
 public:
-    virtual Vector3f RetrieveRGBFromUV(float u, float v, float z = 0.0f) { }
+    virtual Vector3f RetrieveRGBFromUV(float u, float v, float z = 0.0f) const { }
     virtual Vector3f GetHorizontalDifference(float u, float v, float z = 0.0f) { }
     virtual Vector3f GetVerticalDifference(float u, float v, float z = 0.0f) {}
     virtual Vector3f GetPixelOffset(float u, float v, float offsetX, float offsetY) { }
     virtual Vector3f GetBumpNormal(const Vector3f& n, float u, float v, Vector3f pu, Vector3f pv) {}
 
-    virtual Vector3f Fetch(int i, int j, int w = 0.0f /* = 0.f */) {}
+    virtual Vector3f Fetch(int i, int j, int w = 0.0f /* = 0.f */) const {}
 };
 
 class ImageTexture : public Texture
@@ -86,8 +89,8 @@ public:
     Vector3f CalculateNearest(float row, float column);
     Vector3f CalculateBilinear(float row, float column);
 
-    virtual Vector3f Fetch(int i, int j, int w = 0.0f /* = 0.f */) override; 
-    virtual Vector3f RetrieveRGBFromUV(float u, float v, float z = 0.0f) override;
+    virtual Vector3f Fetch(int i, int j, int w = 0.0f /* = 0.f */) const override;
+    virtual Vector3f RetrieveRGBFromUV(float u, float v, float z = 0.0f) const override;
     virtual Vector3f GetHorizontalDifference(float u, float v, float z = 0.0f) override;
     virtual Vector3f GetVerticalDifference(float u, float v, float z = 0.0f) override;
     virtual Vector3f GetPixelOffset(float u, float v, float offsetX, float offsetY) override;
@@ -133,7 +136,7 @@ protected:
 public:
     PerlinTexture(int id, DecalMode dm, float bumpFactor, float scale, NoiseConversionType method);
 
-    virtual Vector3f RetrieveRGBFromUV(float u, float v, float z = 0.0f) override;
+    virtual Vector3f RetrieveRGBFromUV(float u, float v, float z = 0.0f) const override;
 
 private:
     unsigned seed;
@@ -152,10 +155,10 @@ private:
 
     void ShuffleIndices();
 
-    float PerlinWeight(float x);
+    float PerlinWeight(float x) const;
 
-    Vector3f GetGradientVector(int i, int j, int k);
-    int      GetShuffledIndex(int i);
+    Vector3f GetGradientVector(int i, int j, int k) const;
+    int GetShuffledIndex(int i) const;
     int      hash(int, int, int);
 };
 

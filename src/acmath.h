@@ -688,6 +688,8 @@ T Lerp(T minBound, T maxBound, float t) { return (1 - t) * minBound + t * maxBou
 template<typename T>
 float Remap01(T val, T mn, T mx) { return Clamp((val - mn) / (mx - mn), 0.0f, 1.0f); }
 
+inline bool AroundZero(float value, float sensitivity = 0.001f) { return value > -sensitivity && value < sensitivity; }
+
 class Transform;
 
 class Ray

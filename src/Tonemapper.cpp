@@ -24,7 +24,7 @@ void Tonemapper::SetTonemapStrategy(TonemapType tonemapType)
     mTonemapType = tonemapType;
 }
 
-float* Tonemapper::Tonemap(const Image &image)
+float* Tonemapper::Tonemap(const Image &image) const
 {
     std::unique_ptr<TonemapStrategy> tonemapStrategy{TonemapStrategyFactory::BuildTonemapStrategy(mTonemapType, mTonemapSettings, image)};
     float* tonemappedValues = tonemapStrategy->ComputeTonemappedValues();   

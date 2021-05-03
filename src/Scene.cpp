@@ -9,7 +9,7 @@
 #include "Triangle.h"
 #include "Mesh.h"
 #include "Primitive.h"
-#include "Acceleration.h"
+#include "BVHTree.h"
 #include "tinyxml2.h"
 #include "happly.h"
 #include "Texture.h"
@@ -31,11 +31,6 @@ int Primitive::id = 0;
 int Scene::debugBegin = -1;
 int Scene::debugEnd = -1;
 int Scene::debugCurrent = 0;
-
-std::vector<Camera*>& Scene::GetAllCameras()
-{
-    return cameras;
-}
 
 Scene::Scene()
 {
@@ -145,13 +140,11 @@ void Scene::ComputeTiltedGlossyReflectionRay(Vector3f& vrd, const Material* inte
     vrd = resulting;
 }
 
-
-
 // Calculate light for the given ray
 void Scene::CalculateLight(Ray &r, Vector3f &outColor, int depth, float ctw, float rth)
 {
     SurfaceIntersection intersection{};
-    accelerator->Intersect(accelerator->root, r, intersection); // Find the closest object in the path
+    // accelerator->Intersect(accelerator->root, r, intersection); // Find the closest object in the path
 
     if (!intersection.mat) // No object in the path
     {
@@ -259,7 +252,7 @@ void Scene::CalculateLight(Ray &r, Vector3f &outColor, int depth, float ctw, flo
 
         Ray tempRay = Ray(intersection.ip + intersection.n * shadowRayEps, pointToLight, nullptr, nullptr, r.time);
 
-        accelerator->Intersect(accelerator->root, tempRay, closestObjectInPath); // Find closest object in the path
+        // accelerator->Intersect(accelerator->root, tempRay, closestObjectInPath); // Find closest object in the path
         if (closestObjectInPath.mat) // If found                                                                                                                                                                // Closest object in the path of the ray from intersection point to light exists
         {
             float distanceToObject = SqLength(closestObjectInPath.ip - intersection.ip); // Distance to closest found object between intersection point and the light
@@ -460,7 +453,7 @@ void Scene::RenderCam(Camera *cam, Image &img, int iStart, int iEnd)
             else
                 res = RenderPixel(cam, i, j);
 
-            img.SetPixelValue(j, i, res);   // Set pixel colour in the image
+            img.SetPixelColor(j, i, res);   // Set pixel colour in the image
         }
     }
 

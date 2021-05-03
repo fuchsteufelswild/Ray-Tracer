@@ -35,9 +35,9 @@ public:
     int mImageHeight;
 
 public:
-    Image(int width, int height);                             
-    void SetPixelValue(int col, int row, const Color &color); 
-    Color GetPixelValue(int col, int row) const;
+    Image(int width, int height);
+    void SetPixelColor(int col, int row, const Color &color);
+    Color GetPixelColor(int col, int row) const;
     void SaveImageAsPPM(const char *imageName) const;
 public:
     int GetImageWidth() const;

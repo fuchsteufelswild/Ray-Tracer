@@ -3,6 +3,8 @@
 
 namespace actracer {
 
+Material* Material::DefaultMaterial = new Material{};
+
 float Dielectric::ComputeFresnelEffect(float n1, float n2, float cos1, float cos2)
 {
 

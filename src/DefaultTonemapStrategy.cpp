@@ -63,7 +63,7 @@ namespace actracer
 
     void DefaultTonemapStrategy::RecordPixelLuminance(int row, int column, float &luminanceSum)
     {
-        Color pixelColor = mInputImage.GetPixelValue(column, row);
+        Color pixelColor = mInputImage.GetPixelColor(column, row);
 
         float luminance = ComputeLuminance(pixelColor);
         mLuminances.push_back(luminance);
@@ -78,7 +78,7 @@ namespace actracer
 
     Vector3f DefaultTonemapStrategy::ComputeTonemappedPixelColor(int row, int column)
     {
-        Color pixelColor = mInputImage.GetPixelValue(column, row);
+        Color pixelColor = mInputImage.GetPixelColor(column, row);
 
         float luminance = ComputeLuminance(pixelColor);
         float resultingLuminance = ComputeResultingLuminance(luminance);

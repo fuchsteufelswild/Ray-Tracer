@@ -15,38 +15,8 @@ Camera::Camera(int id, const char *imageName, const Vector3f &pos, const Vector3
     : imgPlane(imgPlane), m_Id(id), m_Pos(pos), m_Gaze(gaze), m_Up(up), focusDistance(focDis), apertureSize(apertSize)
 
 {
-    // Set Camera name
-    const char* c = imageName;
-
-    char* f = this->imageName;
-
-    while(*c != '\0')
-    {
-        if(*c != ' ')
-            *(f++) = *(c++); 
-        else
-            c++;
-    }
-
-    *f = '\0';
-    // --
-    
-    // Set camera coordinate axes
-    m_Gaze = Normalize(m_Gaze);
-    m_Up   = Normalize(m_Up);
-
-    float correlation = Dot(m_Gaze, m_Up);
-    if(correlation > 0.01f || correlation < -0.01f)
-    {
-        m_Right = Normalize(Cross(m_Gaze, m_Up));
-        m_Up    = Normalize(Cross(m_Right, m_Gaze));
-    }
-    else
-    {
-        m_Up = Normalize(m_Up);
-        m_Right = Normalize(Cross(m_Gaze, m_Up));
-    }
-    // --
+    SetImageName(imageName);
+    SetupCameraCoordinateAxes();
 
     nSamples = numberOfSamples;
     nSamplesSqrt = std::sqrt(nSamples);
@@ -60,13 +30,47 @@ Camera::Camera(int id, const char *imageName, const Vector3f &pos, const Vector3
     camSeed = std::chrono::system_clock::now().time_since_epoch().count();
     camGenerator = std::default_random_engine(camSeed);
     camDistribution = std::uniform_real_distribution<double>(-apertureSize / 2, apertSize / 2);
-
-    std::cout << "cam info\n";
-    std::cout << m_Pos << m_Gaze << m_Up << m_Right << imgPlane.left << " " << imgPlane.right << " " << imgPlane.bottom << " " << imgPlane.top << " " << imgPlane.distance << "\n";
 }
 
-// Takes coordinate of an image pixel as row and col, and
-// returns the ray going through that pixel.
+void Camera::SetImageName(const char* imageName)
+{
+    const char *c = imageName;
+
+    char *f = this->imageName;
+
+    while (*c != '\0')
+    {
+        if (*c != ' ')
+            *(f++) = *(c++);
+        else
+            c++;
+    }
+
+    *f = '\0';
+}
+
+void Camera::SetupCameraCoordinateAxes()
+{
+    m_Gaze = Normalize(m_Gaze);
+    m_Up = Normalize(m_Up);
+
+    float correlation = Dot(m_Gaze, m_Up);
+    if(AroundZero(correlation, 0.01f))
+    {
+        m_Up = Normalize(m_Up);
+        m_Right = Normalize(Cross(m_Gaze, m_Up));
+    }
+    else
+    {
+        m_Right = Normalize(Cross(m_Gaze, m_Up));
+        m_Up = Normalize(Cross(m_Right, m_Gaze));
+    }
+}
+
+/*
+ * Takes coordinate of an image pixel as row and col, and
+ * returns the ray going through that pixel.
+ */
 Ray Camera::GenerateRay(int row, int col) const
 {
     float horizontalOffset = imgPlane.left + (col + 0.5f) * (imgPlane.right - imgPlane.left) / imgPlane.nx; // Calculate horizontal offset from the leftmost point of the image plane
@@ -80,7 +84,7 @@ Ray Camera::GenerateRay(int row, int col) const
 }
 
 // Generate ray for a pixel sample
-Ray Camera::GenerateRayFromPixelSample(const Pixel& px, int id, PixelSample& pxs)
+Ray Camera::GenerateRayFromPixelSample(const Pixel& px, int id, PixelSample& pxs) const
 {
     std::pair<float, float> samplePos = px.pixelBox.FindIthPartition(id, nSamplesSqrt, sampleHorzDiff); // Find the position of the ith partition sample (e.g 6x6 pixel's 20th)
 

@@ -162,7 +162,7 @@ Vector3f ImageTexture::GetBumpNormal(const Vector3f &n, float u, float v, Vector
     return Normalize(nPrime);
 }
 
-Vector3f ImageTexture::Fetch(int i, int j, int w /* = 0.f */)
+Vector3f ImageTexture::Fetch(int i, int j, int w /* = 0.f */) const
 {
 
     if(i < 0 || j < 0 || i >= width || j >= height)
@@ -202,7 +202,7 @@ Vector3f ImageTexture::Fetch(int i, int j, int w /* = 0.f */)
     return color;
 }
 
-Vector3f ImageTexture::RetrieveRGBFromUV(float u, float v, float w)
+Vector3f ImageTexture::RetrieveRGBFromUV(float u, float v, float w) const
 {
     if(u > 1.0f)
         u = u - (int)u;
@@ -231,12 +231,12 @@ Vector3f ImageTexture::RetrieveRGBFromUV(float u, float v, float w)
            Fetch(p + 1, q + 1) * (dx) * (dy);
 }
 
-float PerlinTexture::PerlinWeight(float x)
+float PerlinTexture::PerlinWeight(float x) const
 {
     return 6 * x * x * x * x * x - 15 * x * x * x * x + 10 * x * x * x;
 }
 
-int PerlinTexture::GetShuffledIndex(int i)
+int PerlinTexture::GetShuffledIndex(int i) const
 {
     int res = i % N;
     if(res < 0)
@@ -244,7 +244,7 @@ int PerlinTexture::GetShuffledIndex(int i)
     return indices[res];
 }
 
-Vector3f PerlinTexture::GetGradientVector(int i, int j, int k)
+Vector3f PerlinTexture::GetGradientVector(int i, int j, int k) const
 {
     return gradientVectors[GetShuffledIndex(i + GetShuffledIndex(j + GetShuffledIndex(k)))];
 }
@@ -265,7 +265,7 @@ inline float smoothstep(const float &t)
     return 6 * t * t * t * t * t - 15 * t * t * t * t + 10 * t * t * t;
 }
 
-Vector3f PerlinTexture::RetrieveRGBFromUV(float u, float v, float z)
+Vector3f PerlinTexture::RetrieveRGBFromUV(float u, float v, float z) const
 {
     u *= noiseScale;
     v *= noiseScale;

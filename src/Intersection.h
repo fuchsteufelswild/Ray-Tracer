@@ -4,7 +4,7 @@
 #include "acmath.h"
 #include <vector>
 
-
+#include "Texture.h"
 
 namespace actracer {
 
@@ -29,7 +29,14 @@ public:
 
     Intersection(const Vector3f& _lip, const Vector3f& _ip, const Vector3f& _n, const Vector2f _uv, Vector3f _rd, float _t = std::numeric_limits<float>::max(), Material* _mat = nullptr)
         : lip(_lip), ip(_ip), n(_n), uv(_uv), rd(_rd), t(_t), mat(_mat) { }
+
+    bool IsValid() const;
 };
+
+inline bool Intersection::IsValid() const 
+{ 
+    return mat != nullptr; 
+}
 
 // Intersection type used for ray-shape intersections
 // Additionaly stores the information about the shape
@@ -44,8 +51,20 @@ public:
 
     SurfaceIntersection(const Vector3f& _lip, const Vector3f &_ip, const Vector3f &_n, const Vector2f _uv, Vector3f _rd, float _t = std::numeric_limits<float>::max(), Material *_mat = nullptr, Shape *_s = nullptr, Texture* text1 = nullptr, Texture* tex2 = nullptr)
         : Intersection(_lip, _ip, _n, _uv, _rd, _t, _mat), shape(_s), tex1(text1), tex2(tex2) 
-    { }
+    { 
+        TweakNormals();
+    }
+
+public:
+    bool DoesSurfaceTextureReplaceAllColor() const;
+
+    void TweakNormals();
 };
+
+inline bool SurfaceIntersection::DoesSurfaceTextureReplaceAllColor() const
+{
+    return tex1 && tex1->decalMode == Texture::DecalMode::REPLACE_ALL;
+}
 
 }
 

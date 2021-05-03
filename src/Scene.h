@@ -88,7 +88,18 @@ public:
 
     void RenderScene(void); // Method to render scene, an image is created for each camera in the scene
 public:
-    std::vector<Camera*>& GetAllCameras();
+    const std::vector<Camera*>& GetAllCameras() const;
+    const std::vector<Primitive*>& GetAllPrimitives() const;
+    const std::vector<Light*>& GetAllLights() const;
+    
+    const Tonemapper* GetTonemapper() const;
+    const Texture* GetBackgroundTexture() const;
+
+    int GetMaximumRecursionDepth() const;
+    float GetIntersectionTestEpsilon() const;
+    float GetShadowRayEpsilon() const;
+    Vector3f GetBackgroundColor() const;
+    Vector3f GetAmbientColor() const;
 
 private:
     void RenderCam(Camera *cam, Image &img, int iStart, int iEnd);     // Render the scene for camera
@@ -102,6 +113,56 @@ private:
 
     void ComputeTiltedGlossyReflectionRay(Vector3f &vrd, const Material* intersectionMat); // Get glossy
 };
+
+inline const Tonemapper *Scene::GetTonemapper() const
+{
+    return tmo;
+}
+
+inline const Texture *Scene::GetBackgroundTexture() const
+{
+    return bgTexture;
+}
+
+inline const std::vector<Light *> &Scene::GetAllLights() const
+{
+    return lights;
+}
+
+inline const std::vector<Camera *> &Scene::GetAllCameras() const
+{
+    return cameras;
+}
+
+inline const std::vector<Primitive *> &Scene::GetAllPrimitives() const
+{
+    return primitives;
+}
+
+inline int Scene::GetMaximumRecursionDepth() const
+{
+    return maxRecursionDepth;
+}
+
+inline float Scene::GetIntersectionTestEpsilon() const
+{
+    return intTestEps;
+}
+
+inline float Scene::GetShadowRayEpsilon() const
+{
+    return shadowRayEps;
+}
+
+inline Vector3f Scene::GetBackgroundColor() const
+{
+    return backgroundColor;
+}
+
+inline Vector3f Scene::GetAmbientColor() const
+{
+    return ambientLight;
+}
 
 }
 

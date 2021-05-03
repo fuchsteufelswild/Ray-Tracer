@@ -3,15 +3,16 @@
 
 #include <vector>
 #include <iostream>
+
+#include "AccelerationStructure.h"
 #include "acmath.h"
-#include "Primitive.h"
 
 namespace actracer {
 
 class Primitive;
 class SurfaceIntersection;
 
-class BVHTree {
+class BVHTree : public AccelerationStructure {
 private:
     struct BVHNode {
         BVHNode* left; // Left child
@@ -53,8 +54,11 @@ private:
     std::vector<Primitive* > primitives;
 private:
     BVHNode* BuildTree(int start, int end, BVHNode*);
+    void Clear(BVHNode *head);
     
 public:
+    virtual void Intersect(Ray &cameraRay, SurfaceIntersection &intersectedSurfaceInformation) const override;
+
     BVHNode *root;
 
     BVHTree(int mpc, int pc, const std::vector<Primitive*>& prims)
@@ -67,7 +71,10 @@ public:
         BuildTree(0, prims.size(), root);
     }
 
-    void Intersect(BVHNode* head, Ray& r, SurfaceIntersection& rt);
+    ~BVHTree();
+
+private:
+    void IntersectThroughHierarchy(BVHNode *head, Ray& cameraRay, SurfaceIntersection& intersectedSurfaceInformation) const;
 };
 
 }

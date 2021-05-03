@@ -2,11 +2,13 @@
 #include "acmath.h"
 #include "Scene.h"
 #include "Primitive.h"
-#include "Acceleration.h"
+#include "AccelerationStructureFactory.h"
 #include "Timer.h"
 #include <chrono>
 
 #include "SceneParser.h"
+
+#include "DefaultRenderer.h"
 
 using namespace actracer;
 
@@ -23,12 +25,16 @@ int main(int argc, char* argv[])
         // currentScene = new Scene(xmlPath);
         std::cout << "After parse\n";
             Timer t("Tree Building");
-        bvh = new BVHTree(1, 10000, currentScene->primitives);  
+        // bvh = new BVHTree(1, 10000, currentScene->primitives);  
     }
     
-    currentScene->accelerator = bvh;
+    RenderStrategy* renderer = new DefaultRenderer();
+    
+
+    // currentScene->accelerator = bvh;
     system("pause");
-    currentScene->RenderScene();
+    renderer->RenderSceneIntoPPM(currentScene);
+    // currentScene->RenderScene();
     system("pause");
 
     return 0;

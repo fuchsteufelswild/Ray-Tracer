@@ -36,16 +36,21 @@ public:
 
 public:
     void SetTonemapStrategy(TonemapType tonemapType);
-    void BuildTonemapStrategy() const;
 
-    float* Tonemap(const Image &image);
+    /*
+     * Tonemaps the input image
+     * returns a pointer pointing to the array of tonemapped values 
+     * {rgb} {rgb} ..
+     * {rgb} {rgb} ..
+     *   .     .
+     *   .     .
+     */ 
+    float* Tonemap(const Image &image) const;
 public:
     float GetImageBurnKey() const;
     float GetSaturationPercentage() const;
     float GetSaturation() const;
     float GetGamma() const;
-private:
-    float ComputeLuminanceWhite(const std::vector<float> &luminances) const;
 private:
     class TonemapStrategy* mTonemapStrategy;
     TonemapSettings mTonemapSettings;

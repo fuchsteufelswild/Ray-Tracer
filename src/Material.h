@@ -12,6 +12,8 @@ class Material {
 public:
     enum MatType { DEFAULT, MIRROR, DIELECTRIC, CONDUCTOR };
 public:
+    static Material* DefaultMaterial;
+public:
     bool degamma = false;
     int id;
     MatType mType;

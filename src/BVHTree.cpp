@@ -2,10 +2,26 @@
 #include <thread>
 #include <future>
 
-#include "Acceleration.h"
+#include "BVHTree.h"
 #include "Primitive.h"
 
 namespace actracer {
+
+    BVHTree::~BVHTree()
+    {
+        Clear(root);
+    }
+
+    void BVHTree::Clear(BVHNode *head)
+    {
+        if(!head)
+            return;
+
+        Clear(head->left);
+        Clear(head->right);
+
+        delete head;
+    }
 
     BVHTree::BVHNode* BVHTree::BuildTree(int start, int end, BVHNode* currentNode)
     {
@@ -125,8 +141,12 @@ namespace actracer {
         return currentNode;
     }
 
+    void BVHTree::Intersect(Ray &cameraRay, SurfaceIntersection &intersectedSurfaceInformation) const
+    {
+        IntersectThroughHierarchy(this->root, cameraRay, intersectedSurfaceInformation);
+    }
 
-    void BVHTree::Intersect(BVHNode* head, Ray& r, SurfaceIntersection& rt)
+    void BVHTree::IntersectThroughHierarchy(BVHNode *head, Ray &r, SurfaceIntersection &rt) const
     {
         if(head == nullptr)
             return;
@@ -151,8 +171,8 @@ namespace actracer {
                 SurfaceIntersection li{};
                 SurfaceIntersection ri{};
 
-                Intersect(head->left, r, li);  // Check left node
-                Intersect(head->right, r, ri); // Check right node
+                IntersectThroughHierarchy(head->left, r, li); // Check left node
+                IntersectThroughHierarchy(head->right, r, ri); // Check right node
 
                 // Pick the closest 
                 if(li.mat && ri.mat) rt = li.t < ri.t ? li : ri;

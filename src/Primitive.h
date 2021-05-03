@@ -25,7 +25,7 @@ public:
         mID = ++id;
     }
 
-    SurfaceIntersection Intersect(Ray& r, SurfaceIntersection& rt) { containedShape->Intersect(r, rt); }
+    SurfaceIntersection Intersect(Ray& r, SurfaceIntersection& rt);
 public:
     BoundingVolume3f bbox; 
 };
