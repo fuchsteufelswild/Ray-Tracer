@@ -123,9 +123,9 @@ Shape* Mesh::Clone(bool resetTransform) const
 
     cloned->triangles = new std::vector<Shape*>();
 
-    for(Texture* t : this->textures)
-        cloned->textures.push_back(t);
-
+    cloned->mColorChangerTexture = mColorChangerTexture;
+    cloned->mNormalChangerTexture = mNormalChangerTexture;
+    
     if(!resetTransform)
     {
         Transform* newTransformation = new Transform(*(this->objTransform));
@@ -145,8 +145,8 @@ Shape* Mesh::Clone(bool resetTransform) const
         cloned->triangles->back()->objTransform = cloned->objTransform;
         cloned->triangles->back()->ownerMesh = cloned;
 
-        for(Texture* t : this->textures)
-            cloned->triangles->back()->textures.push_back(t);
+        cloned->triangles->back()->mColorChangerTexture = mColorChangerTexture;
+        cloned->triangles->back()->mNormalChangerTexture = mNormalChangerTexture;
     }
     
     return cloned;
@@ -184,13 +184,13 @@ void Mesh::SetMotionBlur(const Vector3f& mb)
     }
 }
 
-void Mesh::SetTextures(std::vector<Texture *> tex)
+void Mesh::SetTextures(const ColorChangerTexture *colorChangerTexture, const NormalChangerTexture *normalChangerTexture)
 {
-    Shape::SetTextures(tex);
+    Shape::SetTextures(colorChangerTexture, normalChangerTexture);
 
     for(Shape* tr : (*triangles))
     {
-        tr->SetTextures(tex);
+        tr->SetTextures(colorChangerTexture, normalChangerTexture);
     }
 }
 

@@ -8,6 +8,15 @@
 #include "brdf.h"
 #include "Material.h"
 #include "Texture.h"
+#include "PerlinTextureImpl.h"
+#include "ImageTextureImpl.h"
+
+#include "TextureReader.h"
+
+#include "NormalChangerTexture.h"
+#include "ColorChangerTexture.h"
+
+#include "TextureValueRetrieveMethod.h"
 
 #include "Sphere.h"
 #include "Triangle.h"
@@ -22,6 +31,11 @@ using namespace tinyxml2;
 namespace actracer
 {
 
+/*
+ * TODO: Refactor method
+ * Decompose into multiple functions that are responsible for
+ * parsing specific types of elements
+ */ 
 Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 {
 	Scene* scene = new Scene();
@@ -432,14 +446,17 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 
 			int id;
 
-			PerlinTexture::NoiseConversionType nct = PerlinTexture::NoiseConversionType::LINEAR; // noise conversion
-			ImageTexture::InterpolationType itype = ImageTexture::InterpolationType::NEAREST;
-			Texture::DecalMode decalMode;
-			Texture::TextureType ttype;
+			NoiseConversionType nct = NoiseConversionType::LINEAR;
+			InterpolationMethodCode itype = InterpolationMethodCode::NEAREST;
+			DecalMode decalMode;
+			TextureType ttype;
+			ImageType imType;
 			float noiseScale = 1.0f;
 			float bumpFactor = 1.0f;
 			int normalizer = 255;
 			int imageID;
+
+			Texture* createdTexture;
 
 			eResult = textureElement->QueryIntAttribute("id", &id);
 
@@ -453,29 +470,37 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 				const char *decal = miniElement->GetText();
 				if (strcmp(decal, "bump_normal") == 0)
 				{
-					decalMode = Texture::DecalMode::BUMP_NORMAL;
+					decalMode = DecalMode::BUMP_NORMAL;
+					createdTexture = new NormalBumper();
 				}
 				else if (strcmp(decal, "replace_kd") == 0)
 				{
-					decalMode = Texture::DecalMode::REPLACE_KD;
+					decalMode = DecalMode::REPLACE_KD;
+					createdTexture = new KDReplacer();
 				}
 				else if (strcmp(decal, "replace_normal") == 0)
 				{
-					decalMode = Texture::DecalMode::REPLACE_NORMAL;
+					decalMode = DecalMode::REPLACE_NORMAL;
+					createdTexture = new NormalReplacer();
 				}
 				else if (strcmp(decal, "replace_background") == 0)
 				{
-					decalMode = Texture::DecalMode::REPLACE_BACKGROUND;
+					decalMode = DecalMode::REPLACE_BACKGROUND;
+					createdTexture = new Texture();
 				}
 				else if (strcmp(decal, "replace_all") == 0)
 				{
-					decalMode = Texture::DecalMode::REPLACE_ALL;
+					decalMode = DecalMode::REPLACE_ALL;
+					createdTexture = new ColorReplacer();
 				}
 				else if (strcmp(decal, "blend_kd") == 0)
 				{
-					decalMode = Texture::DecalMode::BLEND_KD;
+					decalMode = DecalMode::BLEND_KD;
+					createdTexture = new KDBlender();
 				}
 			}
+
+
 
 			const char *attrType = textureElement->Attribute("type");
 
@@ -483,7 +508,7 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 			{
 				if (strcmp(attrType, "perlin") == 0)
 				{
-					ttype = Texture::TextureType::PERLIN;
+					ttype = TextureType::PERLIN;
 					XMLElement *noiseElement = textureElement->FirstChildElement("NoiseScale");
 					if (noiseElement != nullptr)
 						noiseElement->QueryFloatText(&noiseScale);
@@ -495,17 +520,18 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 						if (attrType != nullptr)
 						{
 							if (strcmp(attrType, "absval") == 0)
-								nct = PerlinTexture::NoiseConversionType::ABSVAL;
+								nct = NoiseConversionType::ABSVAL;
 							else
-								nct = PerlinTexture::NoiseConversionType::LINEAR;
+								nct = NoiseConversionType::LINEAR;
 						}
 					}
 
-					scene->textures.push_back(new PerlinTexture(id, decalMode, bumpFactor, noiseScale, nct));
+					createdTexture->SetupPerlinTexture(bumpFactor, noiseScale, nct);
+					// scene->textures.push_back(new PerlinTexture(id, decalMode, bumpFactor, noiseScale, nct));
 				}
 				else if (strcmp(attrType, "image") == 0)
 				{
-					ttype = Texture::TextureType::IMAGE;
+					ttype = TextureType::IMAGE;
 
 					XMLElement *imageElement = textureElement->FirstChildElement("ImageId");
 					if (imageElement != nullptr)
@@ -522,25 +548,24 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 						if (attrType != nullptr)
 						{
 							if (strcmp(attrType, "bilinear") == 0)
-								itype == ImageTexture::InterpolationType::BILINEAR;
+								itype == InterpolationMethodCode::BILINEAR;
 							else if (strcmp(attrType, "nearest") == 0)
-								itype == ImageTexture::InterpolationType::NEAREST;
+								itype == InterpolationMethodCode::NEAREST;
 						}
 					}
 
 					if (scene->imagePaths[imageID - 1].back() == 'r')
-					{
-						TMOData out = Tonemapper::ReadExr(scene->imagePaths[imageID - 1]);
-						scene->textures.push_back(new ImageTexture(scene->imagePaths[imageID - 1], id, decalMode, bumpFactor, itype, normalizer, out.data));
-						scene->textures.back()->width = out.width;
-						scene->textures.back()->height = out.height;
-					}
+						imType = ImageType::EXR;
 					else
-						scene->textures.push_back(new ImageTexture(scene->imagePaths[imageID - 1], id, decalMode, bumpFactor, itype, normalizer));
+						imType = ImageType::PNG;
+
+					createdTexture->SetupImageTexture(scene->imagePaths[imageID - 1], bumpFactor, normalizer, imType, itype);
 				}
+
+				scene->textures.push_back(createdTexture);
 			}
 
-			if (decalMode == Texture::DecalMode::REPLACE_BACKGROUND)
+			if (decalMode == DecalMode::REPLACE_BACKGROUND)
 				scene->bgTexture = scene->textures.back();
 
 			textureElement = textureElement->NextSiblingElement("TextureMap");
@@ -683,6 +708,12 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 		Transform *objTransform = new Transform(dummy);
 		std::vector<Texture *> texs;
 
+		ColorChangerTexture* colorChanger = nullptr;
+		NormalChangerTexture* normalChanger = nullptr;
+
+		texs.push_back(nullptr);
+		texs.push_back(nullptr);
+
 		objElement = pObject->FirstChildElement("Transformations");
 		if (objElement != nullptr)
 		{
@@ -718,13 +749,23 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 			}
 
 			for (int i : texIds)
-				texs.push_back(scene->textures[i - 49]);
+			{
+				Texture* tex = scene->textures[i - 49];
+
+				NormalChangerTexture* normalPart = dynamic_cast<NormalChangerTexture*>(tex);
+				ColorChangerTexture* colorPart = dynamic_cast<ColorChangerTexture*>(tex);
+
+				if (normalPart)
+					normalChanger = normalPart;
+				else if (colorPart)
+					colorChanger = colorPart;
+			}
 		}
 
 		scene->objects.push_back(new Sphere(id, scene->materials[matIndex - 1], R, scene->vertices[cIndex - 1], objTransform));
 		scene->primitives.push_back(new Primitive(scene->objects.back(), scene->objects.back()->mat));
 
-		scene->objects.back()->SetTextures(texs);
+		scene->objects.back()->SetTextures(colorChanger, normalChanger);
 
 		pObject = pObject->NextSiblingElement("Sphere");
 	}
@@ -743,6 +784,8 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 		glm::mat4 dummy = glm::mat4(1);
 		Transform *objTransform = new Transform(dummy);
 		std::vector<Texture *> texs;
+		ColorChangerTexture *colorChanger = nullptr;
+		NormalChangerTexture *normalChanger = nullptr;
 
 		eResult = pObject->QueryIntAttribute("id", &id);
 		objElement = pObject->FirstChildElement("Material");
@@ -778,14 +821,24 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 			}
 
 			for (int i : texIds)
-				texs.push_back(scene->textures[i - 49]);
+			{
+				Texture *tex = scene->textures[i - 49];
+
+				NormalChangerTexture *normalPart = dynamic_cast<NormalChangerTexture *>(tex);
+				ColorChangerTexture *colorPart = dynamic_cast<ColorChangerTexture *>(tex);
+
+				if (normalPart)
+					normalChanger = normalPart;
+				else if (colorPart)
+					colorChanger = colorPart;
+			}
 		}
 
 		scene->objects.push_back(new Triangle(id, scene->materials[matIndex - 1], scene->vertices[p1Index - 1], scene->vertices[p2Index - 1], scene->vertices[p3Index - 1],
 											  scene->vertexCoords[p1Index - 1], scene->vertexCoords[p2Index - 1], scene->vertexCoords[p3Index - 1], nullptr));
 		scene->primitives.push_back(new Primitive(scene->objects.back(), scene->objects.back()->mat));
 
-		scene->objects.back()->SetTextures(texs);
+		scene->objects.back()->SetTextures(colorChanger, normalChanger);
 
 		pObject = pObject->NextSiblingElement("Triangle");
 	}
@@ -816,7 +869,8 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 		std::vector<Vector3f *> *meshIndices = new std::vector<Vector3f *>;
 		std::vector<Vector2f *> *meshUVs = new std::vector<Vector2f *>;
 		std::vector<Texture *> texs;
-
+		ColorChangerTexture *colorChanger = nullptr;
+		NormalChangerTexture *normalChanger = nullptr;
 		glm::mat4 dummy = glm::mat4(1);
 		Transform *objTransform = new Transform(dummy);
 
@@ -973,11 +1027,21 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 			}
 
 			for (int i : texIds)
-				texs.push_back(scene->textures[i - 49]);
+			{
+				Texture *tex = scene->textures[i - 49];
+
+				NormalChangerTexture *normalPart = dynamic_cast<NormalChangerTexture *>(tex);
+				ColorChangerTexture *colorPart = dynamic_cast<ColorChangerTexture *>(tex);
+
+				if (normalPart)
+					normalChanger = normalPart;
+				else if (colorPart)
+					colorChanger = colorPart;
+			}
 		}
 
 		scene->objects.back()->SetMotionBlur(motBlur);
-		scene->objects.back()->SetTextures(texs);
+		scene->objects.back()->SetTextures(colorChanger, normalChanger);
 		meshIndices->erase(meshIndices->begin(), meshIndices->end());
 		meshIndices->clear();
 
@@ -1155,34 +1219,6 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 		scene->lights.push_back(new AreaLight(position, radiance, normal, size));
 
 		pLight = pLight->NextSiblingElement("AreaLight");
-	}
-
-	pLight = pElement->FirstChildElement("SphericalDirectionalLight");
-	while (pLight != nullptr)
-	{
-		int imID;
-
-		eResult = pLight->QueryIntAttribute("id", &id);
-		lightElement = pLight->FirstChildElement("ImageId");
-		lightElement->QueryIntText(&imID);
-
-		Texture *tex;
-
-		if (scene->imagePaths[imID - 1].back() == 'r')
-		{
-			TMOData dat = Tonemapper::ReadExr(scene->imagePaths[imID - 1]);
-			tex = new ImageTexture(scene->imagePaths[imID - 1], 2, Texture::DecalMode::BLEND_KD, 1, ImageTexture::InterpolationType::NEAREST, 1, dat.data);
-			tex->width = dat.width;
-			tex->height = dat.height;
-		}
-		else
-		{
-			tex = new ImageTexture(scene->imagePaths[imID - 1], 2, Texture::DecalMode::BLEND_KD, 1, ImageTexture::InterpolationType::NEAREST, 1);
-		}
-
-		scene->lights.push_back(new EnvironmentLight(tex));
-
-		pLight = pLight->NextSiblingElement("SphericalDirectionalLight");
 	}
 
 	return scene;

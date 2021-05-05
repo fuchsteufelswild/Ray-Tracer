@@ -8,6 +8,7 @@
 namespace actracer {
 
 class Texture;
+class ColorChangerTexture;
 
 // Base class for all light types
 // Stores the most basic information
@@ -35,7 +36,7 @@ public:
 
     Light(const Vector3f &position, const Vector3f &intensity); // Construct with essentials
 
-    virtual Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f &viewerDirection, Texture *tex = nullptr, float gamma = 2.2f) = 0; // Abstract function to calculate the contribution of the light to the given surface
+    virtual Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f &viewerDirection, const ColorChangerTexture *tex = nullptr, float gamma = 2.2f) = 0; // Abstract function to calculate the contribution of the light to the given surface
 };
 
 class EnvironmentLight : public Light
@@ -47,7 +48,7 @@ protected:
 public:
     Texture* tex;
     EnvironmentLight(Texture* _tex);
-    virtual Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f &viewerDirection, Texture *tex = nullptr, float gamma = 2.2f) override;
+    virtual Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f &viewerDirection, const ColorChangerTexture *tex = nullptr, float gamma = 2.2f) override;
     virtual Vector3f GetLightDirection(Vector3f normal = Vector3f{}) override;
 };
 
@@ -73,7 +74,7 @@ public:
     DirectionalLight(const Vector3f &position, const Vector3f &intensity, const Vector3f &direction)
         : AdjustableLight(position, intensity, direction) { lType = LightType::DIRECTIONAL; }
 
-    Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f &viewerDirection, Texture *tex = nullptr, float gamma = 2.2f) override;
+    Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f &viewerDirection, const ColorChangerTexture *tex = nullptr, float gamma = 2.2f) override;
 };
 
 // Stores additional exponent variable which will be used in the light contribution formula for the spot light
@@ -86,7 +87,7 @@ protected:
 public:
     SpotLight(const Vector3f &position, const Vector3f &intensity, const Vector3f &direction, float ca, float fa, float exponent = 1);
 
-    Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f &viewerDirection, Texture *tex = nullptr, float gamma = 2.2f) override;
+    Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f &viewerDirection, const ColorChangerTexture *tex = nullptr, float gamma = 2.2f) override;
 };
 
 class AreaLight : public AdjustableLight
@@ -105,7 +106,7 @@ public:
 
     virtual bool IsPointInside(const Vector3f &target) override;
 
-    Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f& viewerDirection, Texture* tex = nullptr, float gamma = 2.2f) override;
+    Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f &viewerDirection, const ColorChangerTexture *tex = nullptr, float gamma = 2.2f) override;
 };
 
 
@@ -114,7 +115,7 @@ class PointLight : public Light
 public:
     PointLight(const Vector3f &position, const Vector3f &intensity);
 
-    Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f &viewerDirection, Texture *tex = nullptr, float gamma = 2.2f) override;
+    Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f &viewerDirection, const ColorChangerTexture *tex = nullptr, float gamma = 2.2f) override;
 };
 
 }

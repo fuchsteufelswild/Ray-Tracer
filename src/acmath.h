@@ -15,6 +15,7 @@ namespace actracer {
 
 class Material;
 class Shape;
+union Color;
 
 // 2D vector to represent
 // uv coordinates and 2D points
@@ -318,6 +319,15 @@ public:
     Vector3<T> operator+(U scalar) const { return {x + scalar, y + scalar, z + scalar}; }
     template <typename U>
     Vector3<T> operator-(U scalar) const { return {x - scalar, y - scalar, z - scalar}; }
+
+    template <typename U>
+    Vector3<T> operator/(const Vector3<U> &v) const { return {x / v.x, y / v.y, z / v.z}; }
+    template <typename U>
+    Vector3<T> operator*(const Vector3<U> &v) const { return {x * v.x, y * v.y, z * v.z}; }
+    template <typename U>
+    Vector3<T> operator+(const Vector3<U> &v) const { return {x + v.x, y + v.y, z + v.z}; }
+    template <typename U>
+    Vector3<T> operator-(const Vector3<U> &v) const { return {x - v.x, y - v.y, z - v.z}; }
 
     Vector3<T> operator/(const Vector3<T> &v) const { return {x / v.x, y / v.y, z / v.z}; }
     Vector3<T> operator*(const Vector3<T> &v) const { return {x * v.x, y * v.y, z * v.z}; }
@@ -689,6 +699,11 @@ template<typename T>
 float Remap01(T val, T mn, T mx) { return Clamp((val - mn) / (mx - mn), 0.0f, 1.0f); }
 
 inline bool AroundZero(float value, float sensitivity = 0.001f) { return value > -sensitivity && value < sensitivity; }
+
+inline float Smoothstep(const float &t)
+{
+    return 6 * t * t * t * t * t - 15 * t * t * t * t + 10 * t * t * t;
+}
 
 class Transform;
 

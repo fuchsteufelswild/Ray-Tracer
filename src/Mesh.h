@@ -22,7 +22,7 @@ public:
 
     void SetMaterial(Material* newMat) override;
     void SetTransformation(Transform* newTransform, bool owned = false) override;
-    void SetTextures(std::vector<Texture *> tex) override;
+    virtual void SetTextures(const ColorChangerTexture *colorChangerTexture, const NormalChangerTexture *normalChangerTexture) override;
 
     virtual void SetMotionBlur(const Vector3f& v);
 };

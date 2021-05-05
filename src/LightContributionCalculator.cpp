@@ -142,56 +142,19 @@ bool LightContributionCalculator::CalculateLight(Ray &r, Vector3f &outColor, int
         return false;
     }
 
+    if(intersection.DoesSurfaceTextureReplaceAllColor())
+    {
+        outColor = intersection.mColorChangerTexture->RetrieveRGBFromUV(intersection.uv.x, intersection.uv.y);
+
+        return true;
+    }
+
     if (!(intersection.shape && r.currShape && intersection.shape == r.currShape)) // If it is not an internal reflection
         outColor = mAmbientLightColor * intersection.mat->ARC;                     // Add ambient light to object colour
 
     Vector3f viewerDirection = Normalize(r.o - intersection.ip); // Camera look direction
 
-    if (intersection.tex2 != nullptr)
-    {
-
-        if (intersection.tex2->decalMode == Texture::DecalMode::REPLACE_NORMAL)
-        {
-            Vector3f normal = intersection.tex2->RetrieveRGBFromUV(intersection.uv.x, intersection.uv.y) / 255.0f;
-
-            normal = Normalize((normal - 0.5f) * 2.0f);
-
-            intersection.n = intersection.shape->RegulateNormal(normal, intersection);
-            ;
-        }
-        else if (intersection.tex2->decalMode == Texture::DecalMode::BUMP_NORMAL)
-        {
-            if (intersection.tex2->texType == Texture::TextureType::PERLIN)
-            {
-                float E = 0.001f;
-                Vector3f g{};
-                g.x = (intersection.tex2->RetrieveRGBFromUV(intersection.ip.x + E, intersection.ip.y, intersection.ip.z) - intersection.tex2->RetrieveRGBFromUV(intersection.ip.x, intersection.ip.y, intersection.ip.z)).x / E;
-                g.y = (intersection.tex2->RetrieveRGBFromUV(intersection.ip.x, intersection.ip.y + E, intersection.ip.z) - intersection.tex2->RetrieveRGBFromUV(intersection.ip.x, intersection.ip.y, intersection.ip.z)).x / E;
-                g.z = (intersection.tex2->RetrieveRGBFromUV(intersection.ip.x, intersection.ip.y, intersection.ip.z + E) - intersection.tex2->RetrieveRGBFromUV(intersection.ip.x, intersection.ip.y, intersection.ip.z)).x / E;
-
-                Vector3f gp = Dot(g, intersection.n) * intersection.n;
-                Vector3f gn = g - gp;
-
-                intersection.n = intersection.n - gn * intersection.tex2->bumpFactor;
-
-                intersection.n = Normalize(intersection.n);
-            }
-            else
-            {
-                Vector3f newNorm = intersection.shape->GetBumpedNormal(intersection.tex2, intersection, r);
-                intersection.n = Normalize(newNorm);
-                ;
-            }
-        }
-        // intersection.n
-    }
-
-    if (intersection.tex1 && intersection.tex1->decalMode == Texture::DecalMode::REPLACE_ALL)
-    {
-        outColor = intersection.tex1->RetrieveRGBFromUV(intersection.uv.x, intersection.uv.y);
-
-        return true;
-    }
+    intersection.TweakSurfaceNormal();
 
     for (Light *light : *lights) // For each point light
     {
@@ -255,7 +218,7 @@ bool LightContributionCalculator::CalculateLight(Ray &r, Vector3f &outColor, int
         }
         else
         {
-            outColor += light->ResultingColorContribution(intersection, viewerDirection, intersection.tex1, gamma); // Add the light contribution
+            outColor += light->ResultingColorContribution(intersection, viewerDirection, intersection.mColorChangerTexture, gamma); // Add the light contribution
         }
             
     }
@@ -341,6 +304,23 @@ bool LightContributionCalculator::CalculateLight(Ray &r, Vector3f &outColor, int
 
     return true;
 }
+
+// bool LightContributionCalculator::CalculateLight(Ray &cameraRay, Vector3f &outColor, int depth, float columnOverWidth, float rowOverHeight)
+// {
+//     SurfaceIntersection intersection{};
+//     accelerator->Intersect(cameraRay, intersection);
+
+//     if (intersection.IsValid())
+//     {
+//         // Short curcuit if replacer texture is on the surface
+//         if (intersection.DoesSurfaceTextureReplaceAllColor())
+//             outColor = intersection.tex1->RetrieveRGBFromUV(intersection.uv.x, intersection.uv.y);
+//         else
+//             CalculateContribution(cameraRay, intersection, outColor, depth);
+//     }
+//     else
+//         outColor = mBackgroundColor.GetBackgroundColorAt(columnOverWidth, rowOverHeight);
+// }
 
 void LightContributionCalculator::CalculateContribution(Ray &cameraRay, SurfaceIntersection &intersectedSurface, Vector3f &outColor, int depth) const
 {

@@ -3,7 +3,6 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include "acmath.h"
 
 namespace actracer {
     

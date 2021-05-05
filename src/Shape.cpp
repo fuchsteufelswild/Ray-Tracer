@@ -40,39 +40,10 @@ void Shape::RegulateVertices()
 
 }
 
-void Shape::SetTextures(std::vector<Texture*> targets)
+void Shape::SetTextures(const ColorChangerTexture* colorChangerTexture, const NormalChangerTexture* normalChangerTexture)
 {
-    if (targets.size() == 1)
-    {
-        if (targets[0]->decalMode == Texture::DecalMode::REPLACE_NORMAL || targets[0]->decalMode == Texture::DecalMode::BUMP_NORMAL)
-        {
-            textures.push_back(nullptr);
-            textures.push_back(targets[0]);
-        }
-        else
-        {
-            textures.push_back(targets[0]);
-            textures.push_back(nullptr);
-        }
-    }
-    else if (targets.size() == 2)
-    {
-        if (targets[0]->decalMode == Texture::DecalMode::REPLACE_NORMAL || targets[0]->decalMode == Texture::DecalMode::BUMP_NORMAL)
-        {
-            textures.push_back(targets[1]);
-            textures.push_back(targets[0]);
-        }
-        else
-        {
-            textures.push_back(targets[0]);
-            textures.push_back(targets[1]);
-        }
-    }
-    else
-    {
-        textures.push_back(nullptr);
-        textures.push_back(nullptr);
-    }
+    mColorChangerTexture = colorChangerTexture;
+    mNormalChangerTexture = normalChangerTexture;
 }
 
 void Shape::SetMaterial(Material* newMat) { this->mat = newMat; }

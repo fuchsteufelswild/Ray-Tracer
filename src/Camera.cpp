@@ -152,7 +152,7 @@ void Camera::DeriveBoundaries(float fov, float a, const Vector3f& gazePoint, con
     camGaze = Normalize(gazePoint - pos); // Derive camera gaze
 
     // Given FoV derive the image plane
-    t = d * tan((fov / 2) * (3.14f / 180.0f));
+    t = d * tan((fov / 2) * (PI / 180.0f));
     b = -t;
 
     r = a * t;

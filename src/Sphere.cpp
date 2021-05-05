@@ -2,6 +2,8 @@
 #include "Sphere.h"
 #include "Texture.h"
 
+#include "NormalChangerTexture.h"
+
 namespace actracer {
 
 Sphere::Sphere(int _id, Material *_mat, float _radius, const Vector3f &centerPoint, Transform *objToWorld, ShadingMode shMode)
@@ -22,98 +24,12 @@ Sphere::Sphere(int _id, Material *_mat, float _radius, const Vector3f &centerPoi
     // this->bbox = this->orgBbox;
 }
 
-
-Vector3f Sphere::RegulateNormal(Vector3f textureNormal, SurfaceIntersection &intersection)
+Vector3f Sphere::GetChangedNormal(const SurfaceIntersection &intersection) const
 {
-    float phi = intersection.lip.y, theta = intersection.lip.x; 
-    float u = intersection.uv.u;
-    float v = intersection.uv.v;
+    if (mNormalChangerTexture != nullptr)
+        return mNormalChangerTexture->GetChangedNormal(intersection, this);
 
-    float x = radius * std::sin(v * PI) * std::cos(PI - u * 2 * PI);
-    float y = radius * std::cos(v * PI);
-    float z = radius * std::sin(v * PI) * std::sin(PI - u * 2 * PI);
-
-    float dpxu = z * 2 * PI;
-    float dpyu = 0.0f;
-    float dpzu = -1 * x * 2 * PI;
-
-    float dpxv = y * std::cos(phi) * PI;
-    float dpyv = -1 * radius * std::sin(theta) * PI;
-    float dpzv = y * std::sin(phi) * PI;
-
-    glm::vec3 T = Normalize(Vector3f(dpxu, dpyu, dpzu));
-    glm::vec3 B = Normalize(Vector3f(dpxv, dpyv, dpzv));
-    glm::vec3 N(intersection.n.x, intersection.n.y, intersection.n.z);
-
-
-    T = T - N * glm::dot(T, N);
-    B = B - glm::dot(B, N) * N - glm::dot(T, B) * T;
-
-    glm::mat3x3 lastRegul(T, B, N);
-
-    Vector3f res = lastRegul * textureNormal;
-
-    res = Normalize(res);
-
-    return res;
-}
-
-Vector3f Sphere::GetBumpedNormal(Texture *tex, SurfaceIntersection &intersection, Ray &ray)
-{
-    float phi = intersection.lip.y, theta = intersection.lip.x;
-    float u = intersection.uv.u;
-    float v = intersection.uv.v;
-
-    float x = radius * std::sin(v * PI) * std::cos(PI - u * 2 * PI);
-    float y = radius * std::cos(v * PI);
-    float z = radius * std::sin(v * PI) * std::sin(PI - u * 2 * PI);
-
-    float dpxu = z * 2 * PI;
-    float dpyu = 0.0f;
-    float dpzu = -1 * x * 2 * PI;
-
-    float dpxv = y * std::cos(phi) * PI;
-    float dpyv = -1 * radius * std::sin(theta) * PI;
-    float dpzv = y * std::sin(phi) * PI;
-
-    glm::vec3 T = Normalize(Vector3f(dpxu, dpyu, dpzu));
-    glm::vec3 B = Normalize(Vector3f(dpxv, dpyv, dpzv));
-
-    glm::vec3 N(intersection.n.x, intersection.n.y, intersection.n.z);
-
-    T = T - N * glm::dot(T, N);
-    B = B - glm::dot(B, N) * N - glm::dot(T, B) * T;
-
-    u -= std::floor(u);
-    v -= std::floor(v);
-
-    float epsilon = 0.002f;
-
-    int i = round(u * (tex->width - 1));
-    int j = round(v * (tex->height - 1));
-    
-
-    Vector3f col = tex->RetrieveRGBFromUV(u, v);
-    Vector3f hCol = tex->RetrieveRGBFromUV(u + epsilon, v);
-    Vector3f vCol = tex->RetrieveRGBFromUV(u, v + epsilon);
-
-    float sc = (col.x + col.y + col.z) / 3;
-    float hc = (hCol.x + hCol.y + hCol.z) / 3;
-    float vc = (vCol.x + vCol.y + vCol.z) / 3;
-
-    float diff1 = (hc - sc);
-    float diff2 = (vc - sc);
-
-    glm::vec3 resn = N - T * diff1 - B * diff2;
-
-    resn = glm::normalize(resn);
-
-    if(glm::dot(resn, N) < 0)
-        resn *= -1;
-
-    Vector3f nn(resn.x, resn.y, resn.z);
-
-    return nn;
+    return intersection.n;
 }
 
 void Sphere::Intersect(Ray &rr, SurfaceIntersection &rt)
@@ -192,7 +108,7 @@ void Sphere::Intersect(Ray &rr, SurfaceIntersection &rt)
 
         ot = rr(point);
 
-        rt = SurfaceIntersection(Vector3f{theta, phi, 0.0f}, point, no, uv, originToCenter, ot, mat, (Shape*)this, textures[0], textures[1]);
+        rt = SurfaceIntersection(Vector3f{theta, phi, 0.0f}, point, no, uv, originToCenter, ot, mat, (Shape*)this, mColorChangerTexture, mNormalChangerTexture);
     }
 }
 
@@ -204,8 +120,8 @@ Shape *Sphere::Clone(bool resetTransform) const
     cloned->mat = this->mat;
     cloned->orgBbox = this->orgBbox;
 
-    for (Texture *t : this->textures)
-        cloned->textures.push_back(t);
+    cloned->mColorChangerTexture = mColorChangerTexture;
+    cloned->mNormalChangerTexture = mNormalChangerTexture;
 
     if (!resetTransform)
     {

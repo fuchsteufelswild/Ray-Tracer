@@ -1,12 +1,17 @@
 #include "Intersection.h"
 
+#include "Shape.h"
 
 namespace actracer
 {
 
-
-void SurfaceIntersection::TweakNormals()
+void SurfaceIntersection::TweakSurfaceNormal()
 {
+    if (shape)
+    {
+        n = shape->GetChangedNormal(*this);
+    }
+
 }
 
 }

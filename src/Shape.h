@@ -10,6 +10,9 @@
 
 namespace actracer{
 
+class ColorChangerTexture;
+class NormalChangerTexture;
+
 class Material;
 class Texture;
 
@@ -34,15 +37,16 @@ public:
 
     Shape* ownerMesh;
 
-    std::vector<Texture*> textures;
+public:
+    const ColorChangerTexture* mColorChangerTexture = nullptr;
+    const NormalChangerTexture* mNormalChangerTexture = nullptr;
 protected:
     Shape(int _id, Material* _mat, Transform* objToWorld = nullptr, ShadingMode shMode = ShadingMode::DEFAULT);
     Shape() { }
-public: 
-    virtual void SetTextures(std::vector<Texture*> targets);
+public:
+    virtual void SetTextures(const ColorChangerTexture *colorChangerTexture, const NormalChangerTexture *normalChangerTexture);
 
-    virtual Vector3f RegulateNormal(Vector3f textureNormal, SurfaceIntersection& intersection) {}
-    virtual Vector3f GetBumpedNormal(Texture *tex, SurfaceIntersection &intersection, Ray &ray) {}
+    virtual Vector3f GetChangedNormal(const SurfaceIntersection &intersection) const {}
 
     virtual void Intersect(Ray &r, SurfaceIntersection& rt) = 0;
     virtual Shape *Clone(bool resetTransform) const = 0;

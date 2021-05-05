@@ -25,11 +25,22 @@ public:
     Triangle(int _id, Material *_mat, Vertex *p0, Vertex* p1, Vertex *p2, Transform *objToWorld = nullptr, Shape *_m = nullptr, 
              ShadingMode shMode = ShadingMode::DEFAULT);
     Triangle() { }
+public:
+    virtual Vector3f GetChangedNormal(const SurfaceIntersection &intersection) const override;
+public:
+    const Vector3f &GetEdgeVectorFromFirstToSecondVertex() const;
+    const Vector3f &GetEdgeVectorFromFirstToThirdVertex() const;
+
+    const Vertex* GetFirstVertex() const;
+    const Vertex* GetSecondVertex() const;
+    const Vertex* GetThirdVertex() const;
+
+    const Vector3f& GetNormal() const;
+
+public:
+
 
     void ModifyVertices();
-
-    virtual Vector3f RegulateNormal(Vector3f textureNormal, SurfaceIntersection &intersection) override;
-    virtual Vector3f GetBumpedNormal(Texture *tex, SurfaceIntersection &intersection, Ray &ray) override;
 
     void PerformVertexModification() override;
     void RegulateVertices() override;
@@ -37,6 +48,36 @@ public:
     void Intersect(Ray& r, SurfaceIntersection& rt) override;
     Shape *Clone(bool resetTransform) const override;
 };
+
+inline const Vector3f& Triangle::GetNormal() const
+{
+    return normal;
+}
+
+inline const Vector3f& Triangle::GetEdgeVectorFromFirstToSecondVertex() const
+{
+    return p0p1;
+}
+
+inline const Vector3f &Triangle::GetEdgeVectorFromFirstToThirdVertex() const
+{
+    return p0p2;
+}
+
+inline const Vertex *Triangle::GetFirstVertex() const
+{
+    return v0;
+}
+
+inline const Vertex *Triangle::GetSecondVertex() const
+{
+    return v1;
+}
+
+inline const Vertex *Triangle::GetThirdVertex() const
+{
+    return v2;
+}
 
 }
 

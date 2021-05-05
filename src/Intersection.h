@@ -4,9 +4,11 @@
 #include "acmath.h"
 #include <vector>
 
-#include "Texture.h"
+#include "ColorChangerTexture.h"
 
 namespace actracer {
+
+class NormalChangerTexture;
 
 class Material;
 class Shape;
@@ -44,26 +46,24 @@ class SurfaceIntersection : public Intersection {
 public:
     Shape* shape; // The object which the ray intersected with
 
-    Texture *tex1;
-    Texture *tex2;
+    const ColorChangerTexture *mColorChangerTexture = nullptr;
+    const NormalChangerTexture *mNormalChangerTexture = nullptr;
 
     SurfaceIntersection() : Intersection() { }
 
-    SurfaceIntersection(const Vector3f& _lip, const Vector3f &_ip, const Vector3f &_n, const Vector2f _uv, Vector3f _rd, float _t = std::numeric_limits<float>::max(), Material *_mat = nullptr, Shape *_s = nullptr, Texture* text1 = nullptr, Texture* tex2 = nullptr)
-        : Intersection(_lip, _ip, _n, _uv, _rd, _t, _mat), shape(_s), tex1(text1), tex2(tex2) 
-    { 
-        TweakNormals();
-    }
+    SurfaceIntersection(const Vector3f &_lip, const Vector3f &_ip, const Vector3f &_n, const Vector2f _uv, Vector3f _rd, float _t = std::numeric_limits<float>::max(), Material *_mat = nullptr, Shape *_s = nullptr, const ColorChangerTexture *tex1 = nullptr, const NormalChangerTexture *tex2 = nullptr)
+        : Intersection(_lip, _ip, _n, _uv, _rd, _t, _mat), shape(_s), mColorChangerTexture(tex1), mNormalChangerTexture(tex2)
+        { }
 
 public:
     bool DoesSurfaceTextureReplaceAllColor() const;
 
-    void TweakNormals();
+    void TweakSurfaceNormal();
 };
 
 inline bool SurfaceIntersection::DoesSurfaceTextureReplaceAllColor() const
 {
-    return tex1 && tex1->decalMode == Texture::DecalMode::REPLACE_ALL;
+    return mColorChangerTexture && mColorChangerTexture->IsReplacingAllColor();
 }
 
 }
