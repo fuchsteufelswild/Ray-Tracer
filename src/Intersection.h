@@ -59,6 +59,11 @@ public:
     bool DoesSurfaceTextureReplaceAllColor() const;
 
     void TweakSurfaceNormal();
+public:
+    Vector3f GetDiffuseReflectionCoefficient() const;
+    Vector3f GetSpecularReflectionCoefficient() const;
+    Vector3f GetSurfaceNormal() const;
+    float GetReflectionIndex() const;
 };
 
 inline bool SurfaceIntersection::DoesSurfaceTextureReplaceAllColor() const

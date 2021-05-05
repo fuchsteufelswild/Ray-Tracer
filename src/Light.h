@@ -11,111 +11,100 @@ class Texture;
 class ColorChangerTexture;
 
 // Base class for all light types
-// Stores the most basic information
-// Position and intensity
-// Every light type must implement its own light formula for the "ResultingColorContribution"
 class Light
 {
 public:
     enum LightType { POINT, DIRECTIONAL, SPOT, AREA, ENVIRONMENT };
-protected:
-    Vector3f lightIntenstiy; // Intensity of the light
-    Vector3f lightPosition;  // Position of the light
-    Light() {}
 public:
-    LightType lType;
-
-    // Getters
+    Light(const Vector3f &position, const Vector3f &intensity);
+public:
     inline Vector3f GetLightPosition() const { return lightPosition; }
     inline Vector3f GetLightIntensity() const { return lightIntenstiy; }
-    virtual Vector3f GetLightDirection(Vector3f normal = Vector3f{}) {}
-
-    // --
-
-    virtual bool IsPointInside(const Vector3f& target) { return false; }
-
-    Light(const Vector3f &position, const Vector3f &intensity); // Construct with essentials
-
-    virtual Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f &viewerDirection, const ColorChangerTexture *tex = nullptr, float gamma = 2.2f) = 0; // Abstract function to calculate the contribution of the light to the given surface
+    virtual Vector3f GetLightDirection(Vector3f normal = Vector3f{}) const {}
+public:
+    virtual void AssignLightFormulaVariables(const SurfaceIntersection &intersection, Vector3f &pointToLight, float &distanceToLight) const;
+    virtual bool IsPointInside(const Vector3f& target) const { return false; }
+    Vector3f ComputeResultingColorContribution(const SurfaceIntersection &intersection, const Vector3f &viewerDirection, const Vector3f &pointToLight, const float distanceToLight, float gamma = 2.2f) const;
+private:
+    Vector3f ComputeBRDFForLight(const SurfaceIntersection &intersection, const Vector3f &pointToViewer, const Vector3f &pointToLight) const;
+    virtual Vector3f GetLightIntensityAtPoint(const Vector3f &pointToLight, const float distanceToLight) const = 0;
+protected:
+    Vector3f lightIntenstiy;
+    Vector3f lightPosition;
+    Light() {}
 };
 
 class EnvironmentLight : public Light
 {
-protected:
-    Vector3f resultingParams;
-    Random<double> randPoint;
-
 public:
     Texture* tex;
     EnvironmentLight(Texture* _tex);
-    virtual Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f &viewerDirection, const ColorChangerTexture *tex = nullptr, float gamma = 2.2f) override;
-    virtual Vector3f GetLightDirection(Vector3f normal = Vector3f{}) override;
+    virtual Vector3f GetLightDirection(Vector3f normal = Vector3f{}) const override;
+
+protected:
+    Vector3f resultingParams;
+    Random<double> randPoint;
 };
 
 
 // Base class for lights with a ceratin direction ( stores additional direction data )
 // e.g Directional and Spot lights
-// Will be added with full implementation later
 class AdjustableLight : public Light
 {
-protected:
-    Vector3f lightDirection; // Direction of the light
 public:
-    inline Vector3f GetLightDirection() const { return lightDirection; }
+    AdjustableLight(const Vector3f &position, const Vector3f &intensity, const Vector3f &direction);
 
-    AdjustableLight(const Vector3f &position, const Vector3f &intensity, const Vector3f &direction); // Construct with additional direction parameter
-
-    Vector3f GetLightDirection(Vector3f normal = Vector3f{}) override { return lightDirection; }
+    virtual Vector3f GetLightDirection(Vector3f normal = Vector3f{}) const override { return lightDirection; }
+protected:
+    Vector3f lightDirection;
 };
 
 class DirectionalLight : public AdjustableLight
 {
 public:
-    DirectionalLight(const Vector3f &position, const Vector3f &intensity, const Vector3f &direction)
-        : AdjustableLight(position, intensity, direction) { lType = LightType::DIRECTIONAL; }
+    DirectionalLight(const Vector3f &position, const Vector3f &intensity, const Vector3f &direction);
 
-    Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f &viewerDirection, const ColorChangerTexture *tex = nullptr, float gamma = 2.2f) override;
+    virtual void AssignLightFormulaVariables(const SurfaceIntersection &intersection, Vector3f &pointToLight, float &distanceToLight) const override;
+    virtual Vector3f GetLightIntensityAtPoint(const Vector3f &pointToLight, const float distanceToLight) const override;
 };
 
-// Stores additional exponent variable which will be used in the light contribution formula for the spot light
 class SpotLight : public AdjustableLight
 {
-protected:
-    float spotLightExponent; // Spotlight exponent ( is used to control spotlight's effect radius )
-    float coverageAngle;
-    float falloffAngle;
 public:
     SpotLight(const Vector3f &position, const Vector3f &intensity, const Vector3f &direction, float ca, float fa, float exponent = 1);
 
-    Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f &viewerDirection, const ColorChangerTexture *tex = nullptr, float gamma = 2.2f) override;
+    virtual Vector3f GetLightIntensityAtPoint(const Vector3f &pointToLight, const float distanceToLight) const override;
+protected:
+    float spotLightExponent; // Used to control spotlight's effect radius
+    float coverageAngle;
+    float falloffAngle;
 };
 
 class AreaLight : public AdjustableLight
 {
-protected:
-    float size;
-    Random<double> randPoint{};
-
-    Vector3f sampledPoint;
 public:
     AreaLight(const Vector3f& p, const Vector3f& r, const Vector3f& d, float s);
 
-    Vector3f GetRandomPointInSquare();
+    virtual void AssignLightFormulaVariables(const SurfaceIntersection &intersection, Vector3f &pointToLight, float &distanceToLight) const override;
+    virtual Vector3f GetLightIntensityAtPoint(const Vector3f &pointToLight, const float distanceToLight) const override;
 
-    Vector3f GetLightDirection(Vector3f normal = Vector3f{}) override;
+    Vector3f GetRandomPointInSquare() const;
+    virtual Vector3f GetLightDirection(Vector3f normal = Vector3f{}) const override;
+    virtual bool IsPointInside(const Vector3f &target) const override;
 
-    virtual bool IsPointInside(const Vector3f &target) override;
+protected:
+    float size;
+    mutable Random<double> randPoint{};
 
-    Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f &viewerDirection, const ColorChangerTexture *tex = nullptr, float gamma = 2.2f) override;
+    mutable Vector3f sampledPoint;
 };
-
 
 class PointLight : public Light
 {
 public:
     PointLight(const Vector3f &position, const Vector3f &intensity);
 
-    Vector3f ResultingColorContribution(SurfaceIntersection target, const Vector3f &viewerDirection, const ColorChangerTexture *tex = nullptr, float gamma = 2.2f) override;
+    virtual Vector3f GetLightIntensityAtPoint(const Vector3f &pointToLight, const float distanceToLight) const override;
 };
 
 }

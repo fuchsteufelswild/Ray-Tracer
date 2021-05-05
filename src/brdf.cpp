@@ -146,11 +146,11 @@ namespace actracer {
     {
         float cost = Dot(wi, n);
 
-        if (cost < 0)
+        if (cost <= 0)
             return Vector3f{};
 
-        if (std::acos(cost) < pi / 2.0)
-            return kd * cost + ks * std::pow(std::max(0.0f, Dot(n, Normalize(wi + wo))), specularPhong);
+        return kd * cost + ks * std::pow(std::max(0.0f, Dot(n, Normalize(wi + wo))), specularPhong);
+        // if (std::acos(cost) < pi / 2.0) 
     }
 
     Vector3f BRDFPhongOriginal::f(const Vector3f &wi, const Vector3f &wo, const Vector3f &n, const Vector3f &kd, const Vector3f &ks, float)

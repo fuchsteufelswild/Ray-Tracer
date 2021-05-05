@@ -84,7 +84,7 @@ static Vector3f DielectricPowerAbsorption(const Ray& r, const Intersection& inte
 }
 
 // Get the tilted glossy reflection ray
-void LightContributionCalculator::ComputeTiltedGlossyReflectionRay(Vector3f &vrd, const Material *intersectionMat)
+void LightContributionCalculator::ComputeTiltedGlossyReflectionRay(Vector3f &vrd, const Material *intersectionMat) const
 {
     int mIndex = MinAbsElementIndex(vrd); // Get minimum absolute index
 
@@ -131,219 +131,168 @@ void LightContributionCalculator::SetRenderParameters(int maximumRecursionDepth,
     this->randomGenerator = &randomGenerator;
 }
 
-bool LightContributionCalculator::CalculateLight(Ray &r, Vector3f &outColor, int depth, float columnOverWidth, float rowOverHeight)
+bool LightContributionCalculator::CalculateLight(Ray &cameraRay, Vector3f &outColor, int depth, float columnOverWidth, float rowOverHeight) const
 {
     SurfaceIntersection intersection{};
-    accelerator->Intersect(r, intersection); // Find the closest object in the path
+    accelerator->Intersect(cameraRay, intersection);
 
-    if(!intersection.IsValid())
+    if (intersection.IsValid())
     {
-        outColor = mBackgroundColor.GetBackgroundColorAt(columnOverWidth, rowOverHeight);
-        return false;
-    }
+        // Do not calculate costly light contribution if texture replaces all color directly
+        if (intersection.DoesSurfaceTextureReplaceAllColor())
+            outColor = intersection.mColorChangerTexture->RetrieveRGBFromUV(intersection.uv.x, intersection.uv.y);
 
-    if(intersection.DoesSurfaceTextureReplaceAllColor())
-    {
-        outColor = intersection.mColorChangerTexture->RetrieveRGBFromUV(intersection.uv.x, intersection.uv.y);
+        intersection.TweakSurfaceNormal();
+        CalculateContribution(cameraRay, intersection, outColor, depth);
 
         return true;
     }
+    else
+        outColor = mBackgroundColor.GetBackgroundColorAt(columnOverWidth, rowOverHeight);
 
-    if (!(intersection.shape && r.currShape && intersection.shape == r.currShape)) // If it is not an internal reflection
-        outColor = mAmbientLightColor * intersection.mat->ARC;                     // Add ambient light to object colour
+    return false;
+}
 
-    Vector3f viewerDirection = Normalize(r.o - intersection.ip); // Camera look direction
+void LightContributionCalculator::CalculateContribution(Ray &cameraRay, SurfaceIntersection &intersectedSurface, Vector3f &outColor, int depth) const
+{
+    Vector3f pointToViewer = Normalize(cameraRay.o - intersectedSurface.ip);
 
-    intersection.TweakSurfaceNormal();
-
-    for (Light *light : *lights) // For each point light
+    if(!IsInternalReflection(cameraRay, intersectedSurface))
     {
-
-        if (intersection.shape && r.currShape && intersection.shape == r.currShape) // If internal reflection
-            break;
-
-        Vector3f pointToLight = light->GetLightPosition() - intersection.ip; // Light direction
-
-        float distanceToLight = SqLength(pointToLight); // Distance to light
-
-        pointToLight = Normalize(pointToLight); // Normalize for the ray direction
-
-        if (light->lType == Light::LightType::DIRECTIONAL)
-        {
-            distanceToLight = 1e9;
-            pointToLight = -light->GetLightDirection();
-            pointToLight = Normalize(pointToLight);
-        }
-        else if (light->lType == Light::LightType::AREA)
-        {
-            Vector3f tempPos = light->GetLightDirection();
-            pointToLight = tempPos - intersection.ip;
-
-            distanceToLight = SqLength(pointToLight);
-            pointToLight = Normalize(pointToLight);
-        }
-        else if (light->lType == Light::LightType::ENVIRONMENT)
-        {
-            Vector3f tempPos = light->GetLightDirection(intersection.n);
-            pointToLight = tempPos;
-
-            distanceToLight = SqLength(pointToLight);
-            pointToLight = Normalize(pointToLight);
-        }
-
-        // Closest object between the intersection point and light
-        SurfaceIntersection closestObjectInPath{};
-
-        Ray tempRay = Ray(intersection.ip + intersection.n * shadowRayEpsilon, pointToLight, nullptr, nullptr, r.time);
-
-        accelerator->Intersect(tempRay, closestObjectInPath); // Find closest object in the path
-        if (closestObjectInPath.mat)                                             // If found                                                                                                                                                                // Closest object in the path of the ray from intersection point to light exists
-        {
-            float distanceToObject = SqLength(closestObjectInPath.ip - intersection.ip); // Distance to closest found object between intersection point and the light
-
-            if (distanceToObject > shadowRayEpsilon && distanceToObject < distanceToLight - shadowRayEpsilon) // Object is closer than light ( it is in-between )
-                continue;
-        }
-
-        if (intersection.mat->brdf)
-        {
-            Vector3f wi = pointToLight;
-            Vector3f wo = viewerDirection;
-            Vector3f kd = intersection.mat->DRC;
-            Vector3f ks = intersection.mat->SRC;
-            Vector3f surfaceNormal = intersection.n;
-
-            Vector3f brdfValue = intersection.mat->brdf->f(wi, wo, surfaceNormal, kd, ks, intersection.mat->rIndex);
-            outColor += light->GetLightIntensity() / (distanceToLight * distanceToLight) * brdfValue;
-        }
-        else
-        {
-            outColor += light->ResultingColorContribution(intersection, viewerDirection, intersection.mColorChangerTexture, gamma); // Add the light contribution
-        }
-            
+        outColor += CalculateAmbientLightContribution(intersectedSurface);
+        outColor += ProcessLights(intersectedSurface, pointToViewer, cameraRay.time);
     }
 
-    // Recursive tracing
-    if (depth < maximumRecursionDepth && intersection.mat->mType != Material::MatType::DEFAULT)
+    if (depth < maximumRecursionDepth && intersectedSurface.mat->mType != Material::MatType::DEFAULT)
     {
-        Vector3f sn = Normalize(intersection.n); // Surface normal
+        Vector3f sn = Normalize(intersectedSurface.n); // Surface normal
         float Fr = 1;
         bool flag = false;
-        if (intersection.mat->mType != Material::MatType::MIRROR)
+        if (intersectedSurface.mat->mType != Material::MatType::MIRROR)
         {
             Vector3f tiltedRay{};
-
-            if (SetRefraction(intersection, r, flag, sn, Fr, tiltedRay)) // Get the tilted ray
+            bool hasIntersected = false;
+            if (SetRefraction(intersectedSurface, cameraRay, flag, sn, Fr, tiltedRay)) // Get the tilted ray
             {
-                bool hasIntersected = false;
                 Vector3f fracColor{};
                 if (!flag) // Ray is coming from outside
                 {
-                    Ray tempRay = Ray(intersection.ip + -sn * shadowRayEpsilon, tiltedRay, intersection.mat, intersection.shape, r.time);
+                    Ray tempRay = Ray(intersectedSurface.ip + -sn * shadowRayEpsilon, tiltedRay, intersectedSurface.mat, intersectedSurface.shape, cameraRay.time);
                     hasIntersected = CalculateLight(tempRay, fracColor, depth + 1);
                 }
                 else // Ray is inside
                 {
-                    Ray tempRay = Ray(intersection.ip + -sn * shadowRayEpsilon, tiltedRay, Material::DefaultMaterial, nullptr, r.time);
+                    Ray tempRay = Ray(intersectedSurface.ip + -sn * shadowRayEpsilon, tiltedRay, Material::DefaultMaterial, nullptr, cameraRay.time);
                     hasIntersected = CalculateLight(tempRay, fracColor, depth + 1);
                 }
-                if (hasIntersected) // If it Intersects with an object
+                if (hasIntersected)
                     outColor = outColor + fracColor * (1 - Fr);
             }
-            else if (intersection.shape == r.currShape) // Did not change
+            else if (intersectedSurface.shape == cameraRay.currShape) // Did not change
                 Fr = 1;
         }
 
-        if (intersection.mat->mType == Material::MatType::MIRROR || intersection.mat->mType == Material::MatType::CONDUCTOR)
+        if (intersectedSurface.mat->mType == Material::MatType::MIRROR || intersectedSurface.mat->mType == Material::MatType::CONDUCTOR)
         {
 
-            if (intersection.mat->MRC.x != 0 || intersection.mat->MRC.y != 0 || intersection.mat->MRC.z != 0)
+            if (intersectedSurface.mat->MRC.x != 0 || intersectedSurface.mat->MRC.y != 0 || intersectedSurface.mat->MRC.z != 0)
             {
-                float hasIntersected = false;
                 float gam = 1.0f;
-                if (intersection.mat->degamma)
+                if (intersectedSurface.mat->degamma)
                     gam = 2.2f;
 
-                Vector3f vrd = Normalize(sn * 2.0f * Dot(viewerDirection, sn) - viewerDirection); // Viewer reflection direction
+                Vector3f vrd = Normalize(sn * 2.0f * Dot(pointToViewer, sn) - pointToViewer);     // Viewer reflection direction
                 Vector3f mirCol = Vector3f(0.0f, 0.0f, 0.0f);                                     // Resulting mirror color
 
+                bool hasIntersection = false;
+
                 // If roughness > 0 apply glossy reflection
-                if (intersection.mat->roughness > 0)
-                    ComputeTiltedGlossyReflectionRay(vrd, intersection.mat);
+                if (intersectedSurface.mat->roughness > 0)
+                    ComputeTiltedGlossyReflectionRay(vrd, intersectedSurface.mat);
 
-                Ray tempRay = Ray(intersection.ip + sn * shadowRayEpsilon, vrd, r.currMat, r.currShape, r.time);
-                hasIntersected = CalculateLight(tempRay, mirCol, depth + 1); // Calculate color of the object for the viewer reflection direction ray
+                Ray tempRay = Ray(intersectedSurface.ip + sn * shadowRayEpsilon, vrd, cameraRay.currMat, cameraRay.currShape, cameraRay.time);
+                hasIntersection = CalculateLight(tempRay, mirCol, depth + 1); // Calculate color of the object for the viewer reflection direction ray
 
-                if (hasIntersected && intersection.mat->mType == Material::MatType::MIRROR)
-                    outColor = outColor + mirCol * intersection.mat->MRC * gam;
-                if (hasIntersected && intersection.mat->mType == Material::MatType::CONDUCTOR) // If it Intersects with an object
-                    outColor = outColor + mirCol * intersection.mat->MRC * Fr;
+                if (hasIntersection && intersectedSurface.mat->mType == Material::MatType::MIRROR)
+                    outColor = outColor + mirCol * intersectedSurface.mat->MRC * gam;
+                if (hasIntersection && intersectedSurface.mat->mType == Material::MatType::CONDUCTOR) // If it Intersects with an object
+                    outColor = outColor + mirCol * intersectedSurface.mat->MRC * Fr;
             }
         }
 
-        if (intersection.mat->mType == Material::MatType::DIELECTRIC)
+        if (intersectedSurface.mat->mType == Material::MatType::DIELECTRIC)
         {
-            Vector3f vrd = Normalize(sn * 2.0f * Dot(viewerDirection, sn) - viewerDirection); // Viewer reflection direction
-            Vector3f mirCol = Vector3f(0.0f, 0.0f, 0.0f);                                     // Resulting mirror color
+            Vector3f vrd = Normalize(sn * 2.0f * Dot(pointToViewer, sn) - pointToViewer); // Viewer reflection direction
+            Vector3f mirCol = Vector3f(0.0f, 0.0f, 0.0f); // Resulting mirror color
 
-            Ray tempRay = Ray(intersection.ip + sn * shadowRayEpsilon, vrd, r.currMat, r.currShape, r.time);
+            Ray tempRay = Ray(intersectedSurface.ip + sn * shadowRayEpsilon, vrd, cameraRay.currMat, cameraRay.currShape, cameraRay.time);
             CalculateLight(tempRay, mirCol, depth + 1); // Calculate color of the object for the viewer reflection direction ray
 
-            if (intersection.mat->mType == Material::MatType::DIELECTRIC)
+            if (intersectedSurface.mat->mType == Material::MatType::DIELECTRIC)
             {
                 outColor = outColor + mirCol * Fr;
 
                 if (flag) // If ray was inside
                 {
-                    Vector3f param = DielectricPowerAbsorption(r, intersection);
+                    Vector3f param = DielectricPowerAbsorption(cameraRay, intersectedSurface);
                     outColor *= param;
                 }
             }
         }
     }
-
-    return true;
 }
 
-// bool LightContributionCalculator::CalculateLight(Ray &cameraRay, Vector3f &outColor, int depth, float columnOverWidth, float rowOverHeight)
-// {
-//     SurfaceIntersection intersection{};
-//     accelerator->Intersect(cameraRay, intersection);
-
-//     if (intersection.IsValid())
-//     {
-//         // Short curcuit if replacer texture is on the surface
-//         if (intersection.DoesSurfaceTextureReplaceAllColor())
-//             outColor = intersection.tex1->RetrieveRGBFromUV(intersection.uv.x, intersection.uv.y);
-//         else
-//             CalculateContribution(cameraRay, intersection, outColor, depth);
-//     }
-//     else
-//         outColor = mBackgroundColor.GetBackgroundColorAt(columnOverWidth, rowOverHeight);
-// }
-
-void LightContributionCalculator::CalculateContribution(Ray &cameraRay, SurfaceIntersection &intersectedSurface, Vector3f &outColor, int depth) const
-{
-    outColor += CalculateAmbientLightContribution(cameraRay, intersectedSurface);
-
-    
-}
-
-Vector3f LightContributionCalculator::CalculateAmbientLightContribution(const Ray &ray, const SurfaceIntersection &intersectedSurface) const
-{
-    if (!IsInternalReflection(ray, intersectedSurface))
-        return mAmbientLightColor * intersectedSurface.mat->ARC;
-
-    return Vector3f{};
-}
-
-bool IsInternalReflection(const Ray& ray, const SurfaceIntersection& intersectedSurface)
+bool IsInternalReflection(const Ray &ray, const SurfaceIntersection &intersectedSurface)
 {
     return intersectedSurface.shape && ray.currShape && intersectedSurface.shape == ray.currShape;
 }
 
+Vector3f LightContributionCalculator::CalculateAmbientLightContribution(const SurfaceIntersection &intersectedSurface) const
+{
+    return mAmbientLightColor * intersectedSurface.mat->ARC;
+}
 
-Vector3f BackgroundColor::GetBackgroundColorAt(int columnOverWidth, int rowOverHeight)
+Vector3f LightContributionCalculator::ProcessLights(const SurfaceIntersection &intersectedSurface, const Vector3f &pointToViewer, float rayTime) const
+{
+    Vector3f allLightContribution{};
+    allLightContribution += CalculateAmbientLightContribution(intersectedSurface);
+
+    for (Light *light : *lights)
+        allLightContribution += ProcessLight(light, intersectedSurface, pointToViewer, rayTime);
+
+    return allLightContribution;
+}
+
+Vector3f LightContributionCalculator::ProcessLight(Light *light, const SurfaceIntersection &intersectedSurface, const Vector3f &pointToViewer, float rayTime) const
+{
+    Vector3f pointToLight;
+    float distanceToLight;
+    light->AssignLightFormulaVariables(intersectedSurface, pointToLight, distanceToLight);
+
+    if(!IsThereAnObjectBetweenLightAndIntersectionPoint(intersectedSurface, pointToLight, distanceToLight, rayTime))
+        return light->ComputeResultingColorContribution(intersectedSurface, pointToViewer, pointToLight, distanceToLight);
+
+    return {};
+}
+
+bool LightContributionCalculator::IsThereAnObjectBetweenLightAndIntersectionPoint(const SurfaceIntersection &intersection, const Vector3f &pointToLight, const float distanceToLight, float rayTime) const
+{
+    SurfaceIntersection closestObjectInPath{};
+    Ray tempRay = Ray(intersection.ip + intersection.n * shadowRayEpsilon, pointToLight, nullptr, nullptr, rayTime);
+    accelerator->Intersect(tempRay, closestObjectInPath);
+
+    if (closestObjectInPath.IsValid())                                                                                                                       
+    {
+        float distanceToClosestObject = SqLength(closestObjectInPath.ip - intersection.ip);
+
+        if (distanceToClosestObject > shadowRayEpsilon && distanceToClosestObject < distanceToLight - shadowRayEpsilon)
+            return true;
+    }
+
+    return false;
+}
+
+Vector3f BackgroundColor::GetBackgroundColorAt(int columnOverWidth, int rowOverHeight) const
 {
     if(mBackgroundTexture)
         return mBackgroundTexture->RetrieveRGBFromUV(columnOverWidth, rowOverHeight);

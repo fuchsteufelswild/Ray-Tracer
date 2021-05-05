@@ -20,7 +20,7 @@ class BackgroundColor
 public:
     void Init(const Vector3f &staticBackgroundColor, const Texture *backgroundTexture);
 
-    Vector3f GetBackgroundColorAt(int columnOverWidth, int rowOverHeight);
+    Vector3f GetBackgroundColorAt(int columnOverWidth, int rowOverHeight) const;
 
 private:
     Vector3f mStaticBackgroundColor;
@@ -36,15 +36,21 @@ public:
      * rowOverHeight -> RowPosition Mapped to 01: row / height
      * depth -> reflection/refraction Depth
      */
-    bool CalculateLight(Ray &cameraRay, Vector3f &outColor, int depth, float ctw = 0, float rth = 0);
+    bool CalculateLight(Ray &cameraRay, Vector3f &outColor, int depth, float ctw = 0, float rth = 0) const;
 
     void SetSceneLights(const std::vector<Light*>& lights, const Vector3f& ambientLightColor, const Vector3f& backgroundColor, const Texture* backgroundTexture);
     void SetSceneAccelerator(const AccelerationStructure& accelerator);
     void SetRenderParameters(int maximumRecursionDepth, float intersectionTestEpsilon, float shadowRayEpsilon, float gamma, Random<double>& randomGenerator);
 private:
     void CalculateContribution(Ray &cameraRay, SurfaceIntersection &intersectedSurface, Vector3f &outColor, int depth) const;
-    Vector3f CalculateAmbientLightContribution(const Ray &ray, const SurfaceIntersection &intersectedSurface) const;
-    void ComputeTiltedGlossyReflectionRay(Vector3f &vrd, const Material *intersectionMat);
+
+    Vector3f ProcessLights(const SurfaceIntersection &intersectedSurface, const Vector3f &viewerDirection, float rayTime = 0.0f) const;
+    Vector3f ProcessLight(Light *light, const SurfaceIntersection &intersectedSurface, const Vector3f &pointToViewer, float rayTime) const;
+    Vector3f CalculateAmbientLightContribution(const SurfaceIntersection &intersectedSurface) const;
+
+    bool IsThereAnObjectBetweenLightAndIntersectionPoint(const SurfaceIntersection &intersection, const Vector3f &pointToLight, const float distanceToClosestObject, float rayTime) const;
+
+    void ComputeTiltedGlossyReflectionRay(Vector3f &vrd, const Material *intersectionMat) const;
 private:
     const std::vector<Light*>* lights;
     Random<double>* randomGenerator;

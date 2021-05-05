@@ -305,9 +305,6 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 		eResult = pMaterial->QueryIntAttribute("BRDF", &_brdfID);
 		const char *attr = pMaterial->Attribute("type");
 
-		if (_brdfID != -1)
-			matBRDF = scene->brdfs[_brdfID - 1];
-
 		if (attr != nullptr)
 		{
 			if (strcmp(attr, "mirror") == 0)
@@ -378,6 +375,13 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 		else
 			_roughness = 0;
 
+		if (_brdfID != -1)
+			matBRDF = scene->brdfs[_brdfID - 1];
+		else
+		{
+			matBRDF = new BRDFBlinnPhongOriginal(_phong);
+		}
+		
 		switch (_typ)
 		{
 		case Material::MatType::CONDUCTOR:
@@ -411,6 +415,8 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 			scene->materials.back()->ARC.y = std::pow(scene->materials.back()->ARC.y, 2.2f);
 			scene->materials.back()->ARC.z = std::pow(scene->materials.back()->ARC.z, 2.2f);
 		}
+
+		
 
 		pMaterial = pMaterial->NextSiblingElement("Material");
 	}
