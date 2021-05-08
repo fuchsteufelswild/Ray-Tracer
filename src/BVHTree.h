@@ -18,11 +18,16 @@ private:
         BVHNode* left; // Left child
         BVHNode* right; // Right child
         BoundingVolume3f bbox; // Combined bounding box of the node
-        int axis; // The axis the volume is split upon
+        int axis; // The axis the volume is split upon, can be [0,1,2]
         int startIndex, endIndex; // The interval of the primitives contained in this branch
 
+        bool IsLeaf() const
+        {
+            return left == nullptr;
+        }
+
         // Fill the info for a leaf node
-        void Leaf(int ax, int start, int end, const BoundingVolume3f& box)
+        void BuildLeaf(int ax, int start, int end, const BoundingVolume3f& box)
         {
             axis = ax;
             startIndex = start;
@@ -33,7 +38,7 @@ private:
             bbox = box;
         }
         // Fill the info for an internal node
-        void Internal(int ax, int start, int end, BVHNode* l, BVHNode* r)
+        void BuildInternal(int ax, int start, int end, BVHNode* l, BVHNode* r)
         {
             axis = ax;
             startIndex = start;
@@ -48,8 +53,8 @@ private:
 
 
 private:
-    const int maxPrimitiveCount; // Maximum number of primitives that may be contained in a leaf node
-    static constexpr int partitionCount = 4;    // Number of partitions that will be used to divide the box 
+    const int maxPrimitiveCountInLeaf;
+    static constexpr int partitionCount = 4; // Number of partitions that will be used to divide the box 
 
     std::vector<Primitive* > primitives;
 private:
@@ -59,22 +64,15 @@ private:
 public:
     virtual void Intersect(Ray &cameraRay, SurfaceIntersection &intersectedSurfaceInformation) const override;
 
-    BVHNode *root;
-
-    BVHTree(int mpc, int pc, const std::vector<Primitive*>& prims)
-        : maxPrimitiveCount(mpc), primitives(prims) 
-    {
-        if(prims.size() == 0)
-            return;
-
-        root = new BVHNode{};
-        BuildTree(0, prims.size(), root);
-    }
-
+    BVHTree(int mpc, int pc, const std::vector<Primitive*>& prims);
     ~BVHTree();
 
 private:
+    BVHNode *root;
     void IntersectThroughHierarchy(BVHNode *head, Ray& cameraRay, SurfaceIntersection& intersectedSurfaceInformation) const;
+    // No need for polymorphic node structure, only two exists
+    void ProcessIntersectionForLeafNode(const BVHNode *head, Ray &r, SurfaceIntersection &rt) const;
+    void ProcessIntersectionForInternalNode(const BVHNode *head, Ray &r, SurfaceIntersection &rt) const;
 };
 
 }

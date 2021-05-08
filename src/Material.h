@@ -18,10 +18,10 @@ public:
     int id;
     MatType mType;
 
-    Vector3f DRC; // Diffuse reflection contribution
-    Vector3f SRC; // Specular reflection contribution
-    Vector3f ARC; // Ambient reflection contribution 
-    Vector3f MRC; // Mirror reflection contribution
+    Vector3f DRC; // Diffuse reflection coefficient
+    Vector3f SRC; // Specular reflection coefficient
+    Vector3f ARC; // Ambient reflection coefficient
+    Vector3f MRC; // Mirror reflection coefficient
     BRDFBase* brdf;
 
     float rIndex; // Refraction index
@@ -35,10 +35,12 @@ public:
     Material(int _id, MatType _mType, const Vector3f& _DRC, const Vector3f& _SRC, const Vector3f& _ARC, const Vector3f& _MRC, float _rIndex, float _att, int _phong, float _roughness)
         : id(_id), mType(_mType), DRC(_DRC), SRC(_SRC), ARC(_ARC), MRC(_MRC), rIndex(_rIndex), att(_att), phongExponent(_phong), roughness(_roughness) { }
 
-    virtual float ComputeFresnelEffect(float n1, float n2, float cos1, float cos2)
-    {
-        return 1.0f;
-    }
+    /*
+     * Using fresnel formulas computes the fresnel value
+     * Dielectric and Conductor materials computes it differently
+     * Refer to internet for formulas
+     */ 
+    virtual float ComputeFresnelEffect(float n1, float n2, float cos1, float cos2);
 
     virtual Vector3f ACR() {return Vector3f{}; }
 

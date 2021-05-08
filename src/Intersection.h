@@ -13,6 +13,7 @@ class NormalChangerTexture;
 class Material;
 class Shape;
 class Texture;
+class Ray;
 
 // Base intersection class for storing the information
 // about the intersection between rays and entities
@@ -57,6 +58,8 @@ public:
 
 public:
     bool DoesSurfaceTextureReplaceAllColor() const;
+    bool IsInternalReflection(const Ray& ray) const;
+    bool CanReflectLight() const;
 
     void TweakSurfaceNormal();
 public:

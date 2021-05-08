@@ -7,6 +7,16 @@
 
 namespace actracer {
 
+    BVHTree::BVHTree(int mpc, int pc, const std::vector<Primitive *> &prims)
+        : maxPrimitiveCountInLeaf(mpc), primitives(prims)
+    {
+        if (prims.size() == 0)
+            return;
+
+        root = new BVHNode{};
+        BuildTree(0, prims.size(), root);
+    }
+
     BVHTree::~BVHTree()
     {
         Clear(root);
@@ -23,14 +33,17 @@ namespace actracer {
         delete head;
     }
 
+    /*
+     * TODO: Decompose into smaller functions
+     */ 
     BVHTree::BVHNode* BVHTree::BuildTree(int start, int end, BVHNode* currentNode)
     {
         int primCount = end - start; // Number of primitives that will reside under this node ( this node and its children )
 
-        if(primCount == 1 || start == end) // No or one primitive exist
+        if(primCount <= 1) // No or only one primitive exist
         {
-            Vector3f center = (primitives[start]->bbox.max + primitives[start]->bbox.min) * 0.5f; // Get the mid point of the box
-            currentNode->Leaf(MaxElementIndex(center), start, end, primitives[start]->bbox); // Build a leaf node
+            Vector3f boxCenter = (primitives[start]->bbox.max + primitives[start]->bbox.min) * 0.5f;
+            currentNode->BuildLeaf(MaxElementIndex(boxCenter), start, end, primitives[start]->bbox);
 
             return currentNode;
         }
@@ -50,7 +63,7 @@ namespace actracer {
 
         if(std::abs(combinedCenter.max[splitax] - combinedCenter.min[splitax]) < 0.00000001f) // Difference between the max and min extend of the center is less than some amount
         {
-            currentNode->Leaf(splitax, start, end, combinedVolume);
+            currentNode->BuildLeaf(splitax, start, end, combinedVolume);
             return currentNode;
         }
 
@@ -71,9 +84,9 @@ namespace actracer {
         // Using this find the partition it fits into
         for(int i = start; i < end; ++i)
         {
-            Vector3f v((primitives[i]->bbox.max + primitives[i]->bbox.min) * 0.5f); // Center of the primitive
+            Vector3f primitiveCenter((primitives[i]->bbox.max + primitives[i]->bbox.min) * 0.5f);
 
-            float cp = ClippedPosition(combinedCenter, v, splitax); // Clipped position
+            float cp = ClippedPosition(combinedCenter, primitiveCenter, splitax); // [0-1]
 
             int index = partitionCount * cp; // Between [0, partitionCount]
             if(index == partitionCount) --index;
@@ -126,17 +139,15 @@ namespace actracer {
         }
         else
         {
-            currentNode->Leaf(splitax, start, end, combinedVolume);
+            currentNode->BuildLeaf(splitax, start, end, combinedVolume);
             return currentNode;
         }
         
-        // Initialize children with default values
         BVHNode* l = new BVHNode{}; 
         BVHNode* r = new BVHNode{};
-
-        BuildTree(start, start + midIndex, l);            //
-        BuildTree(start + midIndex, end, r);              // Build left and right then combine
-        currentNode->Internal(splitax, start, end, l, r); // 
+        BuildTree(start, start + midIndex, l); // Left
+        BuildTree(start + midIndex, end, r); // Right
+        currentNode->BuildInternal(splitax, start, end, l, r); // Combine left, right
 
         return currentNode;
     }
@@ -145,7 +156,7 @@ namespace actracer {
     {
         IntersectThroughHierarchy(this->root, cameraRay, intersectedSurfaceInformation);
     }
-
+ 
     void BVHTree::IntersectThroughHierarchy(BVHNode *head, Ray &r, SurfaceIntersection &rt) const
     {
         if(head == nullptr)
@@ -153,32 +164,44 @@ namespace actracer {
         float tn = 0, tf;
         if(head->bbox.Intersect(r, tn, tf)) // Test if ray intersects with the bounding box
         {
-            if(head->left == nullptr) // Leaf
+            if(head->IsLeaf())
+                ProcessIntersectionForLeafNode(head, r, rt);
+            else
+                ProcessIntersectionForInternalNode(head, r, rt);
+        }
+    }
+
+    /*
+     * Loops through all primitives that are contained in this leaf node and picks the closest one
+     */ 
+    void BVHTree::ProcessIntersectionForLeafNode(const BVHNode *head, Ray& r, SurfaceIntersection& rt) const
+    {
+        for (int i = head->startIndex; i < head->endIndex; ++i)
+        {
+            SurfaceIntersection t{};
+            primitives[i]->Intersect(r, t);
+
+            if (t.IsValid() && 
+                t.t > 0 && t.t < rt.t - 0.001f) // Closer
             {
-                // Select the closest one out of all primitives that are
-                // kept in this bounding box
-                for(int i = head->startIndex; i < head->endIndex; ++i) 
-                {
-                    SurfaceIntersection t{};
-                    primitives[i]->Intersect(r, t);
-
-                    if (t.mat && t.t > 0 && t.t < rt.t - 0.001f)
-                        rt = t;
-                }
-            }
-            else // Internal node
-            {
-                SurfaceIntersection li{};
-                SurfaceIntersection ri{};
-
-                IntersectThroughHierarchy(head->left, r, li); // Check left node
-                IntersectThroughHierarchy(head->right, r, ri); // Check right node
-
-                // Pick the closest 
-                if(li.mat && ri.mat) rt = li.t < ri.t ? li : ri;
-                else if(li.mat) rt = li;
-                else if(ri.mat) rt = ri;
+                rt = t;
             }
         }
+    }
+
+    void BVHTree::ProcessIntersectionForInternalNode(const BVHNode *head, Ray &r, SurfaceIntersection &rt) const
+    {
+        SurfaceIntersection leftIntersection{};
+        SurfaceIntersection rightIntersection{};
+        IntersectThroughHierarchy(head->left, r, leftIntersection);   // Check left node
+        IntersectThroughHierarchy(head->right, r, rightIntersection); // Check right node
+
+        // Pick the closest
+        if (leftIntersection.IsValid() && rightIntersection.IsValid())
+            rt = leftIntersection.t < rightIntersection.t ? leftIntersection : rightIntersection;
+        else if (leftIntersection.IsValid())
+            rt = leftIntersection;
+        else if (rightIntersection.IsValid())
+            rt = rightIntersection;
     }
 }

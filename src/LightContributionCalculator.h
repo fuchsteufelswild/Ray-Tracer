@@ -29,7 +29,8 @@ private:
 
 class LightContributionCalculator
 {
-
+public:
+    float GetShadownRayEpsilon() const;
 public:
     /*
      * columnOverWidth -> ColumnPosition Mapped to 01: column / width
@@ -45,12 +46,10 @@ private:
     void CalculateContribution(Ray &cameraRay, SurfaceIntersection &intersectedSurface, Vector3f &outColor, int depth) const;
 
     Vector3f ProcessLights(const SurfaceIntersection &intersectedSurface, const Vector3f &viewerDirection, float rayTime = 0.0f) const;
-    Vector3f ProcessLight(Light *light, const SurfaceIntersection &intersectedSurface, const Vector3f &pointToViewer, float rayTime) const;
+    Vector3f ProcessLight(const Light *light, const SurfaceIntersection &intersectedSurface, const Vector3f &pointToViewer, float rayTime) const;
     Vector3f CalculateAmbientLightContribution(const SurfaceIntersection &intersectedSurface) const;
 
     bool IsThereAnObjectBetweenLightAndIntersectionPoint(const SurfaceIntersection &intersection, const Vector3f &pointToLight, const float distanceToClosestObject, float rayTime) const;
-
-    void ComputeTiltedGlossyReflectionRay(Vector3f &vrd, const Material *intersectionMat) const;
 private:
     const std::vector<Light*>* lights;
     Random<double>* randomGenerator;
@@ -64,11 +63,14 @@ private:
     Vector3f mAmbientLightColor;
     BackgroundColor mBackgroundColor;
     const AccelerationStructure* accelerator;
-
+public:
+    class RecursiveComputation;
 
 };
 
-
-
+inline float LightContributionCalculator::GetShadownRayEpsilon() const
+{
+    return shadowRayEpsilon;
+}
 
 }

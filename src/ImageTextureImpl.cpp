@@ -11,6 +11,12 @@ namespace actracer
 static float GetAverageValue(const Vector3f& color);
 static void AssignRowsFromMatrix(const glm::mat3x2& matrix, glm::vec2& row1, glm::vec2& row2, glm::vec2& row3);
 
+ImageTextureImpl::~ImageTextureImpl()
+{
+    if(mTextureReader)
+        delete mTextureReader;
+}
+
 Vector3f ImageTextureImpl::GetBaseTextureColorForColorChange(const SurfaceIntersection &intersection) const
 {
     return RetrieveRGBFromUV(intersection.uv.x, intersection.uv.y) / mNormalizer;
@@ -136,6 +142,7 @@ void ImageTextureImpl::AssignCombinedMatrixRows(const Triangle &triangle, glm::v
 
 glm::mat3x2 ImageTextureImpl::ComputePositionEdgeMatrixInWorldSpace(const Triangle &triangle) const
 {
+    // Transform into world space
     Vector3f p0p1t = (*triangle.objTransform)(-triangle.GetEdgeVectorFromFirstToSecondVertex(), true);
     Vector3f p0p2t = (*triangle.objTransform)(-triangle.GetEdgeVectorFromFirstToThirdVertex(), true);
 

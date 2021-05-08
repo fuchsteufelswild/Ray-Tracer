@@ -18,14 +18,21 @@ public:
 public:
     Light(const Vector3f &position, const Vector3f &intensity);
 public:
-    inline Vector3f GetLightPosition() const { return lightPosition; }
-    inline Vector3f GetLightIntensity() const { return lightIntenstiy; }
+    Vector3f GetLightPosition() const { return lightPosition; }
+    Vector3f GetLightIntensity() const { return lightIntenstiy; }
     virtual Vector3f GetLightDirection(Vector3f normal = Vector3f{}) const {}
 public:
+    /*
+     * Calculates pointToLight direction vector and distance value,
+     * it may be specialized by derived classes, (e.g point light distance is different than directional light(infinite) )
+     */ 
     virtual void AssignLightFormulaVariables(const SurfaceIntersection &intersection, Vector3f &pointToLight, float &distanceToLight) const;
-    virtual bool IsPointInside(const Vector3f& target) const { return false; }
     Vector3f ComputeResultingColorContribution(const SurfaceIntersection &intersection, const Vector3f &viewerDirection, const Vector3f &pointToLight, const float distanceToLight, float gamma = 2.2f) const;
 private:
+    /*
+     * Calls material's BRDF function with respective parameters,
+     * for more information check brdf.cpp source file
+     */ 
     Vector3f ComputeBRDFForLight(const SurfaceIntersection &intersection, const Vector3f &pointToViewer, const Vector3f &pointToLight) const;
     virtual Vector3f GetLightIntensityAtPoint(const Vector3f &pointToLight, const float distanceToLight) const = 0;
 protected:
@@ -33,19 +40,6 @@ protected:
     Vector3f lightPosition;
     Light() {}
 };
-
-class EnvironmentLight : public Light
-{
-public:
-    Texture* tex;
-    EnvironmentLight(Texture* _tex);
-    virtual Vector3f GetLightDirection(Vector3f normal = Vector3f{}) const override;
-
-protected:
-    Vector3f resultingParams;
-    Random<double> randPoint;
-};
-
 
 // Base class for lights with a ceratin direction ( stores additional direction data )
 // e.g Directional and Spot lights
@@ -90,7 +84,6 @@ public:
 
     Vector3f GetRandomPointInSquare() const;
     virtual Vector3f GetLightDirection(Vector3f normal = Vector3f{}) const override;
-    virtual bool IsPointInside(const Vector3f &target) const override;
 
 protected:
     float size;

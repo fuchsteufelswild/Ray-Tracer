@@ -1,3 +1,8 @@
+/*
+ * Various BRDF functions are implemented,
+ * detailed explanation about BRDFs can be found on internet
+ */ 
+
 #include "brdf.h"
 #include <algorithm>
 

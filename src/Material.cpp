@@ -5,9 +5,13 @@ namespace actracer {
 
 Material* Material::DefaultMaterial = new Material{};
 
+float Material::ComputeFresnelEffect(float n1, float n2, float cos1, float cos2)
+{
+    return 1.0f;
+}
+
 float Dielectric::ComputeFresnelEffect(float n1, float n2, float cos1, float cos2)
 {
-
     float n2c1 = n2 * cos1;
     float n1c2 = n1 * cos2;
     float rpll = (n2c1 - n1c2) / (n2c1 + n1c2); // For parallel component
@@ -21,7 +25,6 @@ float Dielectric::ComputeFresnelEffect(float n1, float n2, float cos1, float cos
 
 float Conductor::ComputeFresnelEffect(float n1, float n2, float cos1, float cos2)
 {
-
     n1 = this->rIndex;
 
     float c2 = cos1 * cos1;

@@ -25,12 +25,12 @@ Vector3f KDBlender::GetChangedColorAddition(const Vector3f &diffuseReflectionCoe
 {
     Vector3f textureColor = mTextureImpl->GetBaseTextureColorForColorChange(intersection);
 
-    Vector3f resultingDp = (diffuseReflectionCoefficient + textureColor) / 2;
-    resultingDp.x = Clamp(resultingDp.x, 0.0f, 1.0f);
-    resultingDp.y = Clamp(resultingDp.y, 0.0f, 1.0f);
-    resultingDp.z = Clamp(resultingDp.z, 0.0f, 1.0f);
+    Vector3f resultingKd = (diffuseReflectionCoefficient + textureColor) / 2;
+    resultingKd.x = Clamp(resultingKd.x, 0.0f, 1.0f);
+    resultingKd.y = Clamp(resultingKd.y, 0.0f, 1.0f);
+    resultingKd.z = Clamp(resultingKd.z, 0.0f, 1.0f);
 
-    return resultingDp;
+    return resultingKd;
 }
 
 Vector3f ColorReplacer::GetChangedColorAddition(const Vector3f &diffuseReflectionCoefficient, const SurfaceIntersection &intersection) const

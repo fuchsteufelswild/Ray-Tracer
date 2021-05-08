@@ -30,6 +30,10 @@ AreaLight::AreaLight(const Vector3f &p, const Vector3f &r, const Vector3f &d, fl
 DirectionalLight::DirectionalLight(const Vector3f &position, const Vector3f &intensity, const Vector3f &direction)
     : AdjustableLight(position, intensity, direction) { }
 
+/*
+ * Calculates light contribution using brdf and regulates the color using intensity
+ * gammaMultiplier is used for applying degamma in case of Tonemapping
+ */ 
 Vector3f Light::ComputeResultingColorContribution(const SurfaceIntersection &intersection, const Vector3f &pointToViewer, const Vector3f& pointToLight, const float distanceToLight, float gamma) const
 {
     float gammaMutliplier = 1;
@@ -121,18 +125,6 @@ Vector3f AreaLight::GetRandomPointInSquare() const
     Vector3f toUp = (float)param2 * size * Vector3f(0.0f, 0.0f, 1.0f);
 
     return lightPosition + toUp + toRight;
-}
-
-bool AreaLight::IsPointInside(const Vector3f& target) const
-{
-    if(target.y - lightPosition.y <= 0.3f && target.y > lightPosition.y)
-    {
-        if(target.x >= lightPosition.x - size / 2 && target.x <= lightPosition.x + size / 2 && 
-           target.z >= lightPosition.z - size / 2 && target.z <= lightPosition.z + size / 2)
-           return true;
-    }
-
-    return false;
 }
 
 }

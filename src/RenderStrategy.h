@@ -12,6 +12,7 @@ class AccelerationStructure;
 class RenderStrategy
 {
 public:
+    virtual ~RenderStrategy() {}
     virtual void RenderSceneIntoPPM(Scene* scene) = 0;
     RenderStrategy(const AccelerationStructure* accelerator);
 protected:

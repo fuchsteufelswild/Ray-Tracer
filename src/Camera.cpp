@@ -91,11 +91,6 @@ Ray Camera::GenerateRayFromPixelSample(const Pixel& px, int id, PixelSample& pxs
     float randX = rayRandomX(0.0f, sampleHorzDiff);
     float randY = rayRandomY(0.0f, sampleVertDiff);
 
-    if (Scene::debugCurrent >= Scene::debugBegin && Scene::debugCurrent <= Scene::debugEnd)
-    {
-        std::cout << "Sampled pixel sample pos Before: " << id << " " << samplePos.first << " " << samplePos.second << "\n";
-    }
-
     samplePos.first += randX;
     samplePos.second += randY;
     
@@ -123,11 +118,6 @@ Ray Camera::GenerateRayFromPixelSample(const Pixel& px, int id, PixelSample& pxs
         Vector3f d = Normalize(p - s); // Tilted direction
 
         rr = Ray(s, d); // Tilted ray
-    }
-
-    if (Scene::debugCurrent >= Scene::debugBegin && Scene::debugCurrent <= Scene::debugEnd)
-    {
-        std::cout << "Sampled pixel sample pos: " << id << " " << samplePos.first << " " << samplePos.second << " t: " << rr.time << "\n";
     }
     
     return rr; // Return the ray object

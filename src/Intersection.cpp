@@ -6,6 +6,19 @@
 namespace actracer
 {
 
+bool SurfaceIntersection::CanReflectLight() const
+{
+    if(mat)
+        return mat->MRC.x != 0 || mat->MRC.y != 0 || mat->MRC.z != 0;
+
+    return false;
+}
+
+bool SurfaceIntersection::IsInternalReflection(const Ray& ray) const
+{
+    return shape && ray.currShape && shape == ray.currShape;
+}
+
 void SurfaceIntersection::TweakSurfaceNormal()
 {
     if (shape)

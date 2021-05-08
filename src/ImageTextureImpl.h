@@ -14,6 +14,8 @@ class TextureReader;
 class ImageTextureImpl : public Texture::TextureImpl
 {
 public:
+    virtual ~ImageTextureImpl();
+
     ImageTextureImpl(const std::string& imagePath, float bumpFactor, int normalizer, ImageType imageType, InterpolationMethodCode interpolationMethod);
 
     virtual Vector3f RetrieveRGBFromUV(float u, float v, float w = 0) const override;
@@ -24,6 +26,10 @@ public:
     virtual Vector3f GetReplacedNormal(const SurfaceIntersection &intersectedSurfaceInformation, const Triangle *triangle = nullptr) const override;
     virtual Vector3f GetReplacedNormal(const SurfaceIntersection &intersectedSurfaceInformation, const Sphere *sphere = nullptr) const override;
 
+    /*
+     * In case of replacing params using Textures, this calculates the regulated value
+     * e.g kd replacement, kd blend
+     */ 
     virtual Vector3f GetBaseTextureColorForColorChange(const SurfaceIntersection& intersection) const override;
 private:
     /*
