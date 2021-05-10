@@ -7,7 +7,7 @@ namespace actracer
 
 LightContributionCalculator::RecursiveComputation *LightContributionCalculator::RecursiveComputation::CreateRecursiveComputation(const SurfaceIntersection &intersection, const LightContributionCalculator &baseContributor, Ray &baseRay, float depth, Random<double> &randomGenerator)
 {
-    switch (intersection.mat->mType)
+    switch (intersection.mat->GetMaterialType())
     {
         case Material::MatType::DIELECTRIC:
             return new RecursiveDielectricComputation(intersection, baseContributor, baseRay, depth, randomGenerator);
@@ -65,12 +65,12 @@ void LightContributionCalculator::RecursiveComputation::PerformReflection(Vector
     bool hasIntersection = ComputeMirrorColor(mirrorColor);
 
     if(hasIntersection)
-        outColor = outColor + mirrorColor * mIntersection.mat->MRC * GetMirrorCoefficient();
+        outColor = outColor + mirrorColor * mIntersection.mat->GetMirrorReflectionCoefficient() * GetMirrorCoefficient();
 }
 
 float RecursiveMirrorComputation::GetMirrorCoefficient() const
 {
-    return mIntersection.mat->degamma ? 2.2f : 1.0f;
+    return mIntersection.mat->GetDegamma() ? 2.2f : 1.0f;
 }
 
 float RecursiveConductorComputation::GetMirrorCoefficient() const
@@ -91,7 +91,7 @@ bool LightContributionCalculator::RecursiveComputation::ComputeMirrorColor(Vecto
 
 void LightContributionCalculator::RecursiveComputation::ComputeTiltedGlossyReflectionDirection(Vector3f &vrd) const
 {
-    if(mIntersection.mat->roughness > 0)
+    if(mIntersection.mat->GetRoughness() > 0)
     {
         int mIndex = MinAbsElementIndex(vrd); // Get minimum absolute index
 
@@ -110,7 +110,7 @@ void LightContributionCalculator::RecursiveComputation::ComputeTiltedGlossyRefle
         // --
 
         // Compute the resulting reflection ray
-        Vector3f resulting = Normalize(vrd + mIntersection.mat->roughness * (r1 + r2));
+        Vector3f resulting = Normalize(vrd + mIntersection.mat->GetRoughness() * (r1 + r2));
 
         vrd = resulting;
     }
@@ -160,7 +160,7 @@ void RecursiveRefractiveComputation::PerformRefraction(Vector3f& outColor)
         Vector3f fractionColor{};
         if (!mIsRayInsideObject)
         {
-            Ray refractionRay = Ray(mIntersection.ip + -mIntersectionSurfaceNormal * mBaseContributor.GetShadownRayEpsilon(), tiltedRay, mIntersection.mat, mIntersection.shape, mBaseRay.time);
+            Ray refractionRay = Ray(mIntersection.ip + -mIntersectionSurfaceNormal * mBaseContributor.GetShadownRayEpsilon(), tiltedRay, mIntersection.mat, mIntersection.containerShape, mBaseRay.time);
             intersectsAnObject = mBaseContributor.CalculateLight(refractionRay, fractionColor, depth + 1);
         }
         else
@@ -202,8 +202,8 @@ bool RecursiveRefractiveComputation::ComputeRefractionParameters(Vector3f &tilte
 
 std::pair<float, float> RecursiveRefractiveComputation::ComputeFresnel(float &corr)
 {
-    float outsideMatIndex = mBaseRay.currMat->rIndex;
-    float insideMatIndex = mIntersection.mat->rIndex;
+    float outsideMatIndex = mBaseRay.currMat->GetRefractionIndex();
+    float insideMatIndex = mIntersection.mat->GetRefractionIndex();
 
     if (mIsRayInsideObject)
         insideMatIndex = 1;
@@ -213,7 +213,7 @@ std::pair<float, float> RecursiveRefractiveComputation::ComputeFresnel(float &co
 
     if (corr > 0) // Invert the normal for internal refraction
     {
-        if (mIntersection.mat->mType == Material::MatType::CONDUCTOR)
+        if (mIntersection.mat->GetMaterialType() == Material::MatType::CONDUCTOR)
             std::swap(outsideMatIndex, insideMatIndex);
         mIntersectionSurfaceNormal = -mIntersectionSurfaceNormal;
     }

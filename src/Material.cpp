@@ -25,7 +25,7 @@ float Dielectric::ComputeFresnelEffect(float n1, float n2, float cos1, float cos
 
 float Conductor::ComputeFresnelEffect(float n1, float n2, float cos1, float cos2)
 {
-    n1 = this->rIndex;
+    n1 = this->GetRefractionIndex();
 
     float c2 = cos1 * cos1;
     float nk = n1 * n1 + aIndex * aIndex;
@@ -36,5 +36,6 @@ float Conductor::ComputeFresnelEffect(float n1, float n2, float cos1, float cos2
 
     return 0.5f * (Rs + Rp);
 }
+
 
 }

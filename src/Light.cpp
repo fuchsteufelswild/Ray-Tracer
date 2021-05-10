@@ -37,7 +37,7 @@ DirectionalLight::DirectionalLight(const Vector3f &position, const Vector3f &int
 Vector3f Light::ComputeResultingColorContribution(const SurfaceIntersection &intersection, const Vector3f &pointToViewer, const Vector3f& pointToLight, const float distanceToLight, float gamma) const
 {
     float gammaMutliplier = 1;
-    if(intersection.mat->degamma) 
+    if(intersection.mat->GetDegamma()) 
         gammaMutliplier = static_cast<float>(std::pow(1, gamma));
 
     return ComputeBRDFForLight(intersection, pointToViewer, pointToLight) * GetLightIntensityAtPoint(pointToLight, distanceToLight) * gammaMutliplier;
@@ -50,9 +50,9 @@ Vector3f Light::ComputeBRDFForLight(const SurfaceIntersection &intersection, con
     Vector3f kd = intersection.GetDiffuseReflectionCoefficient();
     Vector3f ks = intersection.GetSpecularReflectionCoefficient();
     Vector3f n = intersection.GetSurfaceNormal();
-    float reflectionIndex = intersection.GetReflectionIndex();
+    float refractionIndex = intersection.GetRefractionIndex();
 
-    return intersection.mat->brdf->f(wi, wo, n, kd, ks, reflectionIndex);
+    return intersection.mat->GetBRDF()->f(wi, wo, n, kd, ks, refractionIndex);
 }
 
 Vector3f DirectionalLight::GetLightIntensityAtPoint(const Vector3f &pointToLight, const float distanceToLight) const
@@ -103,14 +103,14 @@ void AreaLight::AssignLightFormulaVariables(const SurfaceIntersection &intersect
 
     pointToLight = tempPos - intersection.ip;
     distanceToLight = SqLength(pointToLight);
-    pointToLight = -Normalize(pointToLight);
+    pointToLight = Normalize(pointToLight);
 }
 
 Vector3f AreaLight::GetLightDirection(Vector3f) const
 {
-    sampledPoint = GetRandomPointInSquare();
+    // sampledPoint = GetRandomPointInSquare();
 
-    return sampledPoint;
+    return GetRandomPointInSquare();
 }
 
 Vector3f AreaLight::GetRandomPointInSquare() const

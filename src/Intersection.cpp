@@ -9,14 +9,17 @@ namespace actracer
 bool SurfaceIntersection::CanReflectLight() const
 {
     if(mat)
-        return mat->MRC.x != 0 || mat->MRC.y != 0 || mat->MRC.z != 0;
+    {
+        Vector3f MRC = mat->GetMirrorReflectionCoefficient();
+        return MRC.x != 0 || MRC.y != 0 || MRC.z != 0;
+    }
 
     return false;
 }
 
 bool SurfaceIntersection::IsInternalReflection(const Ray& ray) const
 {
-    return shape && ray.currShape && shape == ray.currShape;
+    return containerShape && ray.currShape && containerShape == ray.currShape;
 }
 
 void SurfaceIntersection::TweakSurfaceNormal()
@@ -30,9 +33,9 @@ Vector3f SurfaceIntersection::GetDiffuseReflectionCoefficient() const
     if(mat)
     {
         if(mColorChangerTexture)
-            return mColorChangerTexture->GetChangedColorAddition(mat->DRC, *this);
+            return mColorChangerTexture->GetChangedColorAddition(mat->GetDiffuseReflectionCoefficient(), *this);
 
-        return mat->DRC;
+        return mat->GetDiffuseReflectionCoefficient();
     }
 
     return {};
@@ -41,7 +44,7 @@ Vector3f SurfaceIntersection::GetDiffuseReflectionCoefficient() const
 Vector3f SurfaceIntersection::GetSpecularReflectionCoefficient() const
 {
     if(mat)
-        return mat->SRC;
+        return mat->GetSpecularReflectionCoefficient();
 
     return {};
 }
@@ -51,10 +54,10 @@ Vector3f SurfaceIntersection::GetSurfaceNormal() const
     return n;
 }
 
-float SurfaceIntersection::GetReflectionIndex() const
+float SurfaceIntersection::GetRefractionIndex() const
 {
     if(mat)
-        return mat->rIndex;
+        return mat->GetRefractionIndex();
 
     return 0;
 }

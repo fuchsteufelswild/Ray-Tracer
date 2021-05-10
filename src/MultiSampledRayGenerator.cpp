@@ -24,9 +24,7 @@ namespace actracer
 
     Ray MultiSampledRayGenerator::GetIthSampleRay(int sampleIndex) const
     {
-        PixelSample pixelSample;
-
-        Ray r = mRayShooter.GenerateRayFromPixelSample(mPixel, sampleIndex, pixelSample);
+        Ray r = mRayShooter.GenerateRayForPixelSample(mPixel, sampleIndex);
 
         r.currMat = Material::DefaultMaterial;
         r.time = mRayTimeRandom(0.0, 1.0);

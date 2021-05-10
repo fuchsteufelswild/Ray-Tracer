@@ -31,14 +31,14 @@ typedef union Color {
 class Image
 {
 public:
-    Image(int width, int height, const Tonemapper* tonemapper = nullptr);
+    Image(int width, int height, const char* imageName, const Tonemapper* tonemapper = nullptr);
     ~Image();
     void SetPixelColor(int col, int row, const Color &color);
     Color GetPixelColor(int col, int row) const;
-    void SaveImage(const char* imageName) const;
+    void SaveImage() const;
 protected:
-    void SaveImageAsPPM(const char *imageName) const;
-    void SaveImageAsEXR(const char *imageName) const;
+    void SaveImageAsPPM() const;
+    void SaveImageAsEXR() const;
 public:
     int GetImageWidth() const;
     int GetImageHeight() const;
@@ -48,6 +48,7 @@ private:
     Color **imageData;
     int mImageWidth;
     int mImageHeight;
+    const char* mImageName;
     const Tonemapper* mTonemapper;
 };
 

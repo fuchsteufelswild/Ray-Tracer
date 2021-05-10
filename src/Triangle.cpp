@@ -308,7 +308,7 @@ void Triangle::Intersect(Ray &rr, SurfaceIntersection &rt)
 
         t = rr(po);
 
-        rt = SurfaceIntersection(lip, po, normal, uv, Normalize(rr.o - po), t, this->mat, this, mColorChangerTexture, mNormalChangerTexture);
+        rt = SurfaceIntersection(lip, po, normal, uv, Normalize(rr.o - po), t, this->mat, this, this->ownerMesh, mColorChangerTexture, mNormalChangerTexture);
     }
 
 }

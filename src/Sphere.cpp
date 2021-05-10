@@ -108,7 +108,7 @@ void Sphere::Intersect(Ray &rr, SurfaceIntersection &rt)
 
         ot = rr(point);
 
-        rt = SurfaceIntersection(Vector3f{theta, phi, 0.0f}, point, no, uv, originToCenter, ot, mat, (Shape*)this, mColorChangerTexture, mNormalChangerTexture);
+        rt = SurfaceIntersection(Vector3f{theta, phi, 0.0f}, point, no, uv, originToCenter, ot, mat, (Shape*)this, (Shape*)this, mColorChangerTexture, mNormalChangerTexture);
     }
 }
 

@@ -87,7 +87,7 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 		int numSamples = 1;
 		char imageName[64];
 		Vector3f pos, gaze, up;
-		ImagePlane imgPlane;
+		Camera::ImagePlane imgPlane;
 		float focalDistance = 0.0f;
 		float apertureSize = 0.0f;
 		int mode = 0;  // Default mode is projective
@@ -179,7 +179,7 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 			scene->tmo = new Tonemapper(key, burn, saturation, gamma);
 		}
 
-		scene->cameras.push_back(new Camera(id, imageName, pos, gaze, up, imgPlane, numSamples, focalDistance, apertureSize));
+		scene->cameras.push_back(new Camera(id, imageName, pos, gaze, up, imgPlane, numSamples, PixelSampleMethod::JITTERED, focalDistance, apertureSize));
 
 		pCamera = pCamera->NextSiblingElement("Camera");
 	}
@@ -381,7 +381,22 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 		{
 			matBRDF = new BRDFBlinnPhongOriginal(_phong);
 		}
-		
+
+		if (degamma)
+		{
+			_DRC.x = std::pow(_DRC.x, 2.2f);
+			_DRC.y = std::pow(_DRC.y, 2.2f);
+			_DRC.z = std::pow(_DRC.z, 2.2f);
+
+			_SRC.x = std::pow(_SRC.x, 2.2f);
+			_SRC.y = std::pow(_SRC.y, 2.2f);
+			_SRC.z = std::pow(_SRC.z, 2.2f);
+
+			_ARC.x = std::pow(_ARC.x, 2.2f);
+			_ARC.y = std::pow(_ARC.y, 2.2f);
+			_ARC.z = std::pow(_ARC.z, 2.2f);
+		}
+
 		switch (_typ)
 		{
 		case Material::MatType::CONDUCTOR:
@@ -395,26 +410,26 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 			break;
 		}
 
-		scene->materials.back()->degamma = degamma;
-		scene->materials.back()->brdf = matBRDF;
+		scene->materials.back()->SetDegamma(degamma);
+		scene->materials.back()->SetBRDF(matBRDF);
 
 		if (matBRDF)
-			scene->materials.back()->brdf->ai = _AI;
+			scene->materials.back()->GetBRDF()->ai = _AI;
 
-		if (scene->materials.back()->degamma)
-		{
-			scene->materials.back()->DRC.x = std::pow(scene->materials.back()->DRC.x, 2.2f);
-			scene->materials.back()->DRC.y = std::pow(scene->materials.back()->DRC.y, 2.2f);
-			scene->materials.back()->DRC.z = std::pow(scene->materials.back()->DRC.z, 2.2f);
+		// if (scene->materials.back()->degamma)
+		// {
+		// 	scene->materials.back()->DRC.x = std::pow(scene->materials.back()->DRC.x, 2.2f);
+		// 	scene->materials.back()->DRC.y = std::pow(scene->materials.back()->DRC.y, 2.2f);
+		// 	scene->materials.back()->DRC.z = std::pow(scene->materials.back()->DRC.z, 2.2f);
 
-			scene->materials.back()->SRC.x = std::pow(scene->materials.back()->SRC.x, 2.2f);
-			scene->materials.back()->SRC.y = std::pow(scene->materials.back()->SRC.y, 2.2f);
-			scene->materials.back()->SRC.z = std::pow(scene->materials.back()->SRC.z, 2.2f);
+		// 	scene->materials.back()->SRC.x = std::pow(scene->materials.back()->SRC.x, 2.2f);
+		// 	scene->materials.back()->SRC.y = std::pow(scene->materials.back()->SRC.y, 2.2f);
+		// 	scene->materials.back()->SRC.z = std::pow(scene->materials.back()->SRC.z, 2.2f);
 
-			scene->materials.back()->ARC.x = std::pow(scene->materials.back()->ARC.x, 2.2f);
-			scene->materials.back()->ARC.y = std::pow(scene->materials.back()->ARC.y, 2.2f);
-			scene->materials.back()->ARC.z = std::pow(scene->materials.back()->ARC.z, 2.2f);
-		}
+		// 	scene->materials.back()->ARC.x = std::pow(scene->materials.back()->ARC.x, 2.2f);
+		// 	scene->materials.back()->ARC.y = std::pow(scene->materials.back()->ARC.y, 2.2f);
+		// 	scene->materials.back()->ARC.z = std::pow(scene->materials.back()->ARC.z, 2.2f);
+		// }
 
 		
 

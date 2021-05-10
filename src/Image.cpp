@@ -4,8 +4,8 @@
 
 namespace actracer {
 
-Image::Image(int width, int height, const Tonemapper* tonemapper)
-    : mImageWidth(width), mImageHeight(height), mTonemapper(tonemapper)
+Image::Image(int width, int height, const char* imageName, const Tonemapper* tonemapper)
+    : mImageWidth(width), mImageHeight(height), mTonemapper(tonemapper), mImageName(imageName)
 {
     imageData = new Color *[height];
 
@@ -35,27 +35,27 @@ void Image::SetPixelColor(int col, int row, const Color &color)
     imageData[row][col] = color;
 }
 
-void Image::SaveImage(const char *imageName) const
+void Image::SaveImage() const
 {
     if (mTonemapper)
-        SaveImageAsEXR(imageName);
+        SaveImageAsEXR();
     else
-        SaveImageAsPPM(imageName);
+        SaveImageAsPPM();
 }
 
-void Image::SaveImageAsEXR(const char *imageName) const
+void Image::SaveImageAsEXR() const
 {
     float *tonemappedColorOutputValues = mTonemapper->Tonemap(*this);
-    mTonemapper->SaveEXR(tonemappedColorOutputValues, GetImageWidth(), GetImageHeight(), imageName);
+    mTonemapper->SaveEXR(tonemappedColorOutputValues, GetImageWidth(), GetImageHeight(), mImageName);
 
     delete[] tonemappedColorOutputValues;
 }
 
-void Image::SaveImageAsPPM(const char *imageName) const
+void Image::SaveImageAsPPM() const
 {
     FILE *output;
 
-    output = fopen(imageName, "w");
+    output = fopen(mImageName, "w");
     fprintf(output, "P3\n");
     fprintf(output, "%d %d\n", mImageWidth, mImageHeight);
     fprintf(output, "255\n");

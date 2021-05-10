@@ -8,28 +8,24 @@
 #include "Random.h"
 #include "Scene.h"
 
+#include "PixelSampler.h"
+
 namespace actracer {
 
 // Construct camera object with given parameters
-Camera::Camera(int id, const char *imageName, const Vector3f &pos, const Vector3f &gaze, const Vector3f &up, const ImagePlane &imgPlane, int numberOfSamples, float focDis, float apertSize)
-    : imgPlane(imgPlane), m_Id(id), m_Pos(pos), m_Gaze(gaze), m_Up(up), focusDistance(focDis), apertureSize(apertSize)
-
+Camera::Camera(int id, const char *imageName, const Vector3f &pos, const Vector3f &gaze, const Vector3f &up, const Camera::ImagePlane &imgPlane, int numberOfSamples, PixelSampleMethod sampleMethod, float focDis, float apertSize)
+    : imgPlane(imgPlane), m_Id(id), m_Pos(pos), m_Gaze(gaze), m_Up(up), focusDistance(focDis), apertureSize(apertSize), nSamples(numberOfSamples)
 {
     SetImageName(imageName);
     SetupCameraCoordinateAxes();
 
-    nSamples = numberOfSamples;
-    nSamplesSqrt = std::sqrt(nSamples);
-    sampleHorzDiff = 1.0f / nSamplesSqrt;
-    sampleVertDiff = 1.0f / nSamplesSqrt;
+    mSinglePixelWidth = (imgPlane.right - imgPlane.left) / imgPlane.nx;
+    mSinglePixelHeight = (imgPlane.top - imgPlane.bottom) / imgPlane.ny;
+
+    mSampler = PixelSampler::CreatePixelSampler(sampleMethod);
+    mSampler->Init(*this);
 
     camRandom = Random<double>{};
-    rayRandomX = Random<double>{};
-    rayRandomY = Random<double>{};
-
-    camSeed = std::chrono::system_clock::now().time_since_epoch().count();
-    camGenerator = std::default_random_engine(camSeed);
-    camDistribution = std::uniform_real_distribution<double>(-apertureSize / 2, apertSize / 2);
 }
 
 void Camera::SetImageName(const char* imageName)
@@ -67,73 +63,98 @@ void Camera::SetupCameraCoordinateAxes()
     }
 }
 
+Camera::~Camera()
+{
+    if(mSampler)
+        delete mSampler;
+}
+
 /*
  * Takes coordinate of an image pixel as row and col, and
- * returns the ray going through that pixel.
+ * returns the ray going through the center of that pixel.
  */
 Ray Camera::GenerateRay(int row, int col) const
 {
-    float horizontalOffset = imgPlane.left + (col + 0.5f) * (imgPlane.right - imgPlane.left) / imgPlane.nx; // Calculate horizontal offset from the leftmost point of the image plane
-    float verticalOffset = imgPlane.top - (row + 0.5f) * (imgPlane.top - imgPlane.bottom) / imgPlane.ny;    // Calculate vertical offset from the top of the image plane
-
-    Vector3f rayDirection = Normalize(m_Gaze * (imgPlane.distance) + m_Right * horizontalOffset + m_Up * verticalOffset); // Calculate ray direction from camera position to pixel position
-
-    Ray rr(m_Pos, rayDirection); // No need for time no sampling motion blur would be sluggy
-
-    return rr; // Create and return the ray object
+    return Ray(m_Pos, CalculateRayDirectionFor(row, col, 0.5f, 0.5f)); // No need for time no sampling motion blur would be sluggy
 }
 
-// Generate ray for a pixel sample
-Ray Camera::GenerateRayFromPixelSample(const Pixel& px, int id, PixelSample& pxs) const
+/*
+ * Generates ray that shoots through sample on the pixel
+ * Tilts ray if lens exists
+ */ 
+Ray Camera::GenerateRayForPixelSample(const Pixel &px, int sampleId) const
 {
-    std::pair<float, float> samplePos = px.pixelBox.FindIthPartition(id, nSamplesSqrt, sampleHorzDiff); // Find the position of the ith partition sample (e.g 6x6 pixel's 20th)
+    std::pair<float, float> samplePositionOffset = (*mSampler)(px, sampleId); // Find the position of the ith partition sample (e.g 6x6 pixel's 20th)
 
-    float randX = rayRandomX(0.0f, sampleHorzDiff);
-    float randY = rayRandomY(0.0f, sampleVertDiff);
+    Vector3f rayDirection = CalculateRayDirectionFor(px.row, px.col, samplePositionOffset.first, samplePositionOffset.second);
+    Ray cameraRay(m_Pos, rayDirection); // Standard ray ( without any tilt by lens )
 
-    samplePos.first += randX;
-    samplePos.second += randY;
-    
-    Vector2f relativeToCenter = px.pixelBox.RelativenessToCenter({samplePos.first, samplePos.second});
+    ApplyLensTilt(cameraRay);
 
-    pxs.positionRelativeToCenter.x = relativeToCenter.x;
-    pxs.positionRelativeToCenter.y = relativeToCenter.y;
+    return cameraRay; 
+}
 
-    float horizontalOffset = imgPlane.left + (px.col + samplePos.first) * px.calcHorzOffset; // Calculate horizontal offset from the leftmost point of the image plane
-    float verticalOffset = imgPlane.top - (px.row + samplePos.second) * px.calcVertOffset;    // Calculate vertical offset from the top of the image plane
+/*
+ * Moves mGaze * imgPlane.distance on z-axis
+ * Moves mRight * horizontalMove on x-axis
+ * Moves mUp * verticalMove on y-axis
+ * Normalize results in a direction vector from Camera center to a pixel on ImagePlane
+ */ 
+Vector3f Camera::CalculateRayDirectionFor(int row, int col, float horizontalOffset, float verticalOffset) const
+{
+    float horizontalMove = CalculateHorizontalPositionOnImagePlane(col, horizontalOffset);
+    float verticalMove = CalculateVerticalPositionOnImagePlane(row, verticalOffset);
 
-    Vector3f rayDirection = Normalize(m_Gaze * (imgPlane.distance) + m_Right * horizontalOffset + m_Up * verticalOffset); // Calculate ray direction from camera position to pixel position
+    return Normalize(m_Gaze * (imgPlane.distance) + m_Right * horizontalMove + m_Up * verticalMove);
+}
 
-    Ray rr(m_Pos, rayDirection); // Standard ray ( without any tilt by lens )
+/*
+ * Moves (col + 0.5f) pixels from left-most position of the plane to right
+ */
+float Camera::CalculateHorizontalPositionOnImagePlane(int col, float horizontalOffset) const
+{
+    return imgPlane.left + (col + horizontalOffset) * mSinglePixelWidth;
+}
 
-    if(apertureSize > 0) // Depth of field
+/*
+ * Moves (row + 0.5f) pixels from top position of the plane to bottom
+ */
+float Camera::CalculateVerticalPositionOnImagePlane(int row, float verticalOffset) const
+{
+    return imgPlane.top - (row + verticalOffset) * mSinglePixelHeight;
+}
+
+/*
+ * We first randomly move ray start direction in both Right and Up axes,
+ * then for destination, we calculate a point which is focus distance away 
+ * from original ray. With this two points we construct the new tilted Ray
+ */ 
+void Camera::ApplyLensTilt(Ray &standardRay) const
+{
+    if(apertureSize > 0)
     {
         float arandX = camRandom(-apertureSize / 2.0, apertureSize / 2.0);
         float arandY = camRandom(-apertureSize / 2.0, apertureSize / 2.0);
 
-        Vector3f s = this->m_Pos + this->m_Right * arandX + this->m_Up * arandY; // Moved point in the aperture
-        float td = this->focusDistance / (Dot(rayDirection, this->m_Gaze)); // t value to reach focal distance with primary ray
+        Vector3f movedPointInAperture = m_Pos + m_Right * arandX + m_Up * arandY;
 
-        Vector3f p = rr(td); // Hit point on the plane at focal distance from camera
-        Vector3f d = Normalize(p - s); // Tilted direction
+        float td = focusDistance / (Dot(standardRay.d, m_Gaze));      // t value to reach focal distance with primary ray
+        Vector3f p = standardRay(td);  // Hit point on the plane at focal distance from camera
+        Vector3f tiltedDirection = Normalize(p - movedPointInAperture);
 
-        rr = Ray(s, d); // Tilted ray
+        standardRay = Ray(movedPointInAperture, tiltedDirection); // Tilted ray
     }
-    
-    return rr; // Return the ray object
 }
 
-// Generate a pixel sample 
-Pixel Camera::GenerateSampleForPixel(int row, int col) const
+/*
+ * normalizedPixelVolume refers to Pixel box left-bottom point is (0,0) right-top point is (1,1)
+ */ 
+Pixel Camera::GeneratePixelDataAt(int row, int col) const
 {
-    float horz = (imgPlane.right - imgPlane.left) / imgPlane.nx; // Horz offset
-    float vert = (imgPlane.top - imgPlane.bottom) / imgPlane.ny; // Vert offset
+    BoundingVolume2f normalizedPixelVolume(Vector2f(0.0f, 0.0f), Vector2f(1.0f, 1.0f));
 
-    BoundingVolume2f vol(Vector2f(0.0f, 0.0f), Vector2f(1.0f, 1.0f)); // Normalized screen volume
-
-    return Pixel{row, col, vol, horz, vert};
+    return Pixel{row, col, normalizedPixelVolume};
 }
-
 
 // Given different camera construct the image plane and essential attributes for the camera
 // using given values

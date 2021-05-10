@@ -46,14 +46,15 @@ inline bool Intersection::IsValid() const
 class SurfaceIntersection : public Intersection {
 public:
     Shape* shape; // The object which the ray intersected with
+    Shape* containerShape;
 
     const ColorChangerTexture *mColorChangerTexture = nullptr;
     const NormalChangerTexture *mNormalChangerTexture = nullptr;
 
     SurfaceIntersection() : Intersection() { }
 
-    SurfaceIntersection(const Vector3f &_lip, const Vector3f &_ip, const Vector3f &_n, const Vector2f _uv, Vector3f _rd, float _t = std::numeric_limits<float>::max(), Material *_mat = nullptr, Shape *_s = nullptr, const ColorChangerTexture *tex1 = nullptr, const NormalChangerTexture *tex2 = nullptr)
-        : Intersection(_lip, _ip, _n, _uv, _rd, _t, _mat), shape(_s), mColorChangerTexture(tex1), mNormalChangerTexture(tex2)
+    SurfaceIntersection(const Vector3f &_lip, const Vector3f &_ip, const Vector3f &_n, const Vector2f _uv, Vector3f _rd, float _t = std::numeric_limits<float>::max(), Material *_mat = nullptr, Shape *_s = nullptr, Shape* _cs = nullptr, const ColorChangerTexture *tex1 = nullptr, const NormalChangerTexture *tex2 = nullptr)
+        : Intersection(_lip, _ip, _n, _uv, _rd, _t, _mat), shape(_s), containerShape(_cs), mColorChangerTexture(tex1), mNormalChangerTexture(tex2)
         { }
 
 public:
@@ -66,7 +67,7 @@ public:
     Vector3f GetDiffuseReflectionCoefficient() const;
     Vector3f GetSpecularReflectionCoefficient() const;
     Vector3f GetSurfaceNormal() const;
-    float GetReflectionIndex() const;
+    float GetRefractionIndex() const;
 };
 
 inline bool SurfaceIntersection::DoesSurfaceTextureReplaceAllColor() const

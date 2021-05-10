@@ -58,9 +58,9 @@ void DefaultRenderer::RetrieveRenderingParamsFromScene(Scene *scene)
 
 void DefaultRenderer::RenderCamera(const Camera *camera)
 {
-    Timer cameraRenderTimer{camera->imageName};
+    Timer cameraRenderTimer{camera->GetImageName()};
 
-    Image sceneImage(camera->imgPlane.nx, camera->imgPlane.ny);
+    Image sceneImage(camera->imgPlane.nx, camera->imgPlane.ny, camera->GetImageName(), tonemapper);
 
     int rowDiff = camera->imgPlane.ny / 8; // Get row difference between successive chunks
     std::thread th1(&DefaultRenderer::RenderCameraViewOntoImage, this, camera, std::ref(sceneImage), 0, rowDiff);
@@ -75,7 +75,7 @@ void DefaultRenderer::RenderCamera(const Camera *camera)
     th1.join(); th2.join(); th3.join(); th4.join(); th5.join(); th6.join(); th7.join(); th8.join();
 
     // RenderCameraViewOntoImage(camera, sceneImage, 0, camera->imgPlane.ny);
-    sceneImage.SaveImage(camera->imageName);
+    sceneImage.SaveImage();
 }
 
 /*
@@ -105,7 +105,7 @@ Image &DefaultRenderer::RenderCameraViewOntoImage(const Camera *camera, Image &i
 
 Color DefaultRenderer::RenderMultiSampled(const Camera *cam, int row, int column)
 {
-    Pixel currentPixel = cam->GenerateSampleForPixel(row, column);
+    Pixel currentPixel = cam->GeneratePixelDataAt(row, column);
     MultiSampledRayGenerator rayGenerator{*cam, currentPixel};
 
     Vector3f sumOfPixelSampleColors{};
@@ -129,6 +129,7 @@ Color DefaultRenderer::RenderWithOneSample(const Camera *camera, int row, int co
 {
     Ray r = camera->GenerateRay(row, column);
     r.currMat = Material::DefaultMaterial;
+    r.currShape = nullptr;
 
     Vector3f pixelColor{};
     CalculateLight(r, pixelColor, 0, (float) column / camera->imgPlane.nx, (float)row / camera->imgPlane.ny);

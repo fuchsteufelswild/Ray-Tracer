@@ -28,14 +28,6 @@ public:
     BRDFBlinnPhongModified(float phong, bool _normalized = false) : BRDFBase(phong), normalized(_normalized) { }
 };
 
-class BRDFBlinnPhongModifiedNormalized : public BRDFBase{
-
-public:
-    virtual Vector3f f(const Vector3f &wi, const Vector3f &wo, const Vector3f &n, const Vector3f &kd, const Vector3f &ks, float ri = 0.0f) override;
-
-    BRDFBlinnPhongModifiedNormalized(float phong) : BRDFBase(phong) {}
-};
-
 class BRDFBlinnPhongOriginal : public BRDFBase {
 
 public:
@@ -55,14 +47,6 @@ public:
     virtual Vector3f f(const Vector3f &wi, const Vector3f &wo, const Vector3f &n, const Vector3f &kd, const Vector3f &ks, float ri = 0.0f) override;
 
     BRDFPhongModified(float phong, bool _normalized = false) : BRDFBase(phong), normalized(_normalized) {}
-};
-
-class BRDFPhongModifiedNormalized : public BRDFBase {
-
-public:
-    virtual Vector3f f(const Vector3f &wi, const Vector3f &wo, const Vector3f &n, const Vector3f &kd, const Vector3f &ks, float ri = 0.0f) override;
-
-    BRDFPhongModifiedNormalized(float phong) : BRDFBase(phong) {}
 };
 
 class BRDFPhongOriginal : public BRDFBase {

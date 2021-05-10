@@ -3,79 +3,50 @@
 
 #include "acmath.h"
 #include "Random.h"
+#include "PixelSampler.h"
 
 namespace actracer {
 
+class PixelSampler;
 union Color;
 
-// Structure for holding variables related to the image plane
-typedef struct ImagePlane
+typedef struct Pixel
 {
-    float left;     // "u" coordinate of the left edge
-    float right;    // "u" coordinate of the right edge
-    float bottom;   // "v" coordinate of the bottom edge
-    float top;      // "v" coordinate of the top edge
-    float distance; // distance to the camera (always positive)
-    int nx;         // number of pixel columns
-    int ny;         // number of pixel rows
-} ImagePlane;
-
-typedef struct Pixel {
     int row;
     int col;
-
     BoundingVolume2f pixelBox;
-    // Precalculated values
-    float calcHorzOffset;
-    float calcVertOffset;
 } Pixel;
-
-typedef struct PixelSample {
-    Vector3f resultingColor;
-    Vector2f positionRelativeToCenter;
-} PixelSample;
 
 class Camera
 {
-private:
-    int m_Id; // Camera id in the scene
-
-    Vector3f m_Pos;   // Camera position
-    Vector3f m_Gaze;  // Gaze of the camera ( negative z axis)
-    Vector3f m_Up;    // Y axis of the camera
-    Vector3f m_Right; // X axis of the camera
-
-    bool isOrthographic; // Camera type ( Either orthographic or projective )
-
-    int nSamples; // Number of samples
-
-    int    nSamplesSqrt; 
-    float  sampleHorzDiff; // Horizontal and vertical difference
-    float  sampleVertDiff; // in pixel sample sections
-
-    float focusDistance; // Focal distance
-    float apertureSize; // Aperture size
-
-    mutable Random<double> camRandom;
-    mutable Random<double> rayRandomX;
-    mutable Random<double> rayRandomY;
-
-    unsigned camSeed;
-    std::default_random_engine camGenerator;
-    std::uniform_real_distribution<double> camDistribution;
+public:
+    
+    // Structure for holding variables related to the image plane
+    typedef struct ImagePlane
+    {
+        float left;     // "u" coordinate of the left edge
+        float right;    // "u" coordinate of the right edge
+        float bottom;   // "v" coordinate of the bottom edge
+        float top;      // "v" coordinate of the top edge
+        float distance; // distance to the camera (always positive)
+        int nx;         // number of pixel columns
+        int ny;         // number of pixel rows
+    } ImagePlane;
 
 public:
     static void DeriveBoundaries(float fov, float a, const Vector3f &gazePoint, const Vector3f &pos, float d, float &l, float &r, float &b, float &t, Vector3f &camGaze);
 public:
-    char imageName[64]; // Target file name
-    int id;
-    ImagePlane imgPlane; // Image plane
+    ImagePlane imgPlane;
 
-    Camera(int id, const char *imageName, const Vector3f &pos, const Vector3f &gaze, const Vector3f &up, const ImagePlane &imgPlane, int numberOfSamples = 1, float focalDistance = 0.0f, float apertSize = 0.0f);
+    Camera(int id, const char *imageName, const Vector3f &pos, const Vector3f &gaze, const Vector3f &up, const Camera::ImagePlane &imgPlane, int numberOfSamples = 1, PixelSampleMethod sampleMethod = PixelSampleMethod::JITTERED, float focalDistance = 0.0f, float apertSize = 0.0f);
+    ~Camera();
 
-    Ray GenerateRay(int row, int col) const; // Generates the ray going through pixel (row, col)
-    Ray GenerateRayFromPixelSample(const Pixel& px, int id, PixelSample& pxs) const; // Generate pixel sample from pixel with given id
-    Pixel GenerateSampleForPixel(int row, int col) const; // Generates a pixel
+    Ray GenerateRay(int row, int col) const;
+    /*
+     * Generates Ray from ith sample of the Pixel
+     */
+    Ray GenerateRayForPixelSample(const Pixel &px, int sampleId) const;
+    Pixel GeneratePixelDataAt(int row, int col) const;
 
     bool IsMultiSamplingOn() const;
 public:
@@ -83,11 +54,34 @@ public:
     int GetSampleCount() const;
     const char* GetImageName() const;
 private:
-    float CalculateHorizontalOffsetOnImagePlane(int col) const;
-    float CalculateVerticalOffsetOnImagePlane(int row) const;
+    Vector3f CalculateRayDirectionFor(int row, int col, float horizontalOffset, float verticalOffset) const;
+    float CalculateHorizontalPositionOnImagePlane(int col, float horizontalOffset) const;
+    float CalculateVerticalPositionOnImagePlane(int row, float verticalOffset) const;
 
+    void ApplyLensTilt(Ray& standardRay) const;
+private:
     void SetImageName(const char *imageName);
     void SetupCameraCoordinateAxes();
+private:
+    float mSinglePixelWidth;
+    float mSinglePixelHeight;
+
+private:
+    char imageName[64]; // Target file name
+    int m_Id;           // Camera id in the scene
+
+    Vector3f m_Pos;   // Camera position
+    Vector3f m_Gaze;  // Gaze of the camera ( negative z axis)
+    Vector3f m_Up;    // Y axis of the camera
+    Vector3f m_Right; // X axis of the camera
+
+    int nSamples;
+
+    float focusDistance;
+    float apertureSize;
+
+    mutable Random<double> camRandom;
+    PixelSampler *mSampler;
 };
 
 inline int Camera::GetID() const 

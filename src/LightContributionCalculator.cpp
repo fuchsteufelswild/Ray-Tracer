@@ -88,7 +88,7 @@ void LightContributionCalculator::CalculateContribution(Ray &cameraRay, SurfaceI
 
 bool IsInternalReflection(const Ray &ray, const SurfaceIntersection &intersectedSurface)
 {
-    return intersectedSurface.shape && ray.currShape && intersectedSurface.shape == ray.currShape;
+    return intersectedSurface.containerShape && ray.currShape && intersectedSurface.containerShape == ray.currShape;
 }
 
 Vector3f LightContributionCalculator::ProcessLights(const SurfaceIntersection &intersectedSurface, const Vector3f &pointToViewer, float rayTime) const
@@ -104,7 +104,7 @@ Vector3f LightContributionCalculator::ProcessLights(const SurfaceIntersection &i
 
 Vector3f LightContributionCalculator::CalculateAmbientLightContribution(const SurfaceIntersection &intersectedSurface) const
 {
-    return mAmbientLightColor * intersectedSurface.mat->ARC;
+    return mAmbientLightColor * intersectedSurface.mat->GetAmbientReflectionCoefficient();
 }
 
 Vector3f LightContributionCalculator::ProcessLight(const Light *light, const SurfaceIntersection &intersectedSurface, const Vector3f &pointToViewer, float rayTime) const

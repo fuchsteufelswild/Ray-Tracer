@@ -88,8 +88,6 @@ public:
 protected:
     float size;
     mutable Random<double> randPoint{};
-
-    mutable Vector3f sampledPoint;
 };
 
 class PointLight : public Light

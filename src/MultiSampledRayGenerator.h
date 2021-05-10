@@ -6,8 +6,6 @@
 namespace actracer
 {
 
-class Pixel;
-class Camera;
 class Ray;
 
 class MultiSampledRayGenerator
