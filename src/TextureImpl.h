@@ -22,9 +22,6 @@ public:
     virtual Vector3f GetReplacedNormal(const SurfaceIntersection &intersectedSurfaceInformation, const Sphere *sphere = nullptr) const = 0;
 
     virtual Vector3f GetBaseTextureColorForColorChange(const SurfaceIntersection &intersection) const = 0;
-
-    // GetBlendedColor
-    // GetReplacedColor
 protected:
     TextureImpl(float bumpFactor);
 protected:

@@ -5,9 +5,9 @@
 namespace actracer
 {
 
-    Vector3f NormalReplacer::GetChangedNormal(const SurfaceIntersection &intersectedSurfaceInformation, const Triangle *triangle) const
-    {
-        return mTextureImpl->GetReplacedNormal(intersectedSurfaceInformation, triangle);
+Vector3f NormalReplacer::GetChangedNormal(const SurfaceIntersection &intersectedSurfaceInformation, const Triangle *triangle) const
+{
+    return mTextureImpl->GetReplacedNormal(intersectedSurfaceInformation, triangle);
 }
 
 Vector3f NormalReplacer::GetChangedNormal(const SurfaceIntersection &intersectedSurfaceInformation, const Sphere *sphere) const

@@ -39,7 +39,11 @@ void LightContributionCalculator::SetRenderParameters(int maximumRecursionDepth,
     this->randomGenerator = &randomGenerator;
 }
 
-bool LightContributionCalculator::CalculateLight(Ray &cameraRay, Vector3f &outColor, int depth, float columnOverWidth, float rowOverHeight) const
+/*
+ * Recursive light calculation,
+ * returns true if ray intersects with any primitive
+ */ 
+bool LightContributionCalculator::CalculateLight(Ray &cameraRay, Vector3f &outColor, int depth, float columnNormalized01, float rowNormalized01) const
 {
     SurfaceIntersection intersection{};
     accelerator->Intersect(cameraRay, intersection);
@@ -58,7 +62,7 @@ bool LightContributionCalculator::CalculateLight(Ray &cameraRay, Vector3f &outCo
         return true;
     }
     else
-        outColor = mBackgroundColor.GetBackgroundColorAt(columnOverWidth, rowOverHeight);
+        outColor = mBackgroundColor.GetBackgroundColorAt(columnNormalized01, rowNormalized01);
 
     return false;
 }

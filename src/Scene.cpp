@@ -45,11 +45,15 @@ Scene::Scene()
     intTestEps = 0.0001;
 }
 
-Shape* Scene::GetMeshWithID(int id, Shape::ShapeType shapeType)
+Shape* Scene::GetMeshWithID(int id)
 {
     for(Shape* sh : objects)
-        if(sh->shType == shapeType && id == sh->id)
+    {
+        if(id == sh->GetID() && dynamic_cast<Mesh*>(sh) != nullptr)
+        {
             return sh;
+        }
+    }
 }
 
 

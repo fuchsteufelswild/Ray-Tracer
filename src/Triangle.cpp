@@ -12,14 +12,12 @@ Triangle::Triangle(int _id, Material *_mat, const Vector3f &p0, const Vector3f &
     : Shape(_id, _mat, objToWorld, shMode)
 {
     ownerMesh = _m;
-    shType = ShapeType::TRIANGLE;
 
     if(!_m && objTransform)
         objTransform->UpdateTransform();
 
-
     if(!_m)
-        ownerMesh = (Shape*)this;
+        ownerMesh = this;
 
     v0 = new Vertex{};
     v1 = new Vertex{};
@@ -38,20 +36,19 @@ Triangle::Triangle(int _id, Material *_mat, const Vector3f &p0, const Vector3f &
 
     normal = Normalize(Cross(-p0p1, -p0p2));
 
-    this->orgBbox = BoundingVolume3f(MaxElements(p0, MaxElements(p1, p2)),
-                                     MinElements(p0, MinElements(p1, p2)));
+    orgBbox = BoundingVolume3f(MaxElements(p0, MaxElements(p1, p2)),
+                               MinElements(p0, MinElements(p1, p2)));
 
-    if(this->objTransform)
-        this->bbox = (*objTransform)(this->orgBbox);
+    if(objTransform)
+        bbox = (*objTransform)(orgBbox);
     else
-        this->bbox = this->orgBbox;
+        bbox = orgBbox;
 }
 
 Triangle::Triangle(int _id, Material *_mat, Vertex *p0, Vertex *p1, Vertex* p2, Transform *objToWorld, Shape *_m, ShadingMode shMode)
     : Shape(_id, _mat, objToWorld, shMode)
 {
     ownerMesh = _m;
-    shType = ShapeType::TRIANGLE;
 
     if (!_m && objTransform)
         objTransform->UpdateTransform();
@@ -65,57 +62,45 @@ Triangle::Triangle(int _id, Material *_mat, Vertex *p0, Vertex *p1, Vertex* p2, 
 
     p0p1 = p0->p - p1->p;
     p0p2 = p0->p - p2->p;
-
-    surfaceArea = Length(Cross(-p0p1, -p0p2));
+    
     normal = Normalize(Cross(-p0p1, -p0p2));
 
-    Vector2f duv02 = p0->uv - p2->uv;
-    Vector2f duv12 = p1->uv - p2->uv;
+    orgBbox = BoundingVolume3f(MaxElements(p0->p, MaxElements(p1->p, p2->p)),
+                               MinElements(p0->p, MinElements(p1->p, p2->p)));
 
-    Vector3f dp02 = p0->p - p2->p;
-    Vector3f dp12 = p1->p - p2->p;
-
-    float det = duv02[0] * duv12[1] - duv02[1] * duv12[0];
-
-    this->orgBbox = BoundingVolume3f(MaxElements(p0->p, MaxElements(p1->p, p2->p)),
-                                     MinElements(p0->p, MinElements(p1->p, p2->p)));
-
-    if (this->objTransform)
-        this->bbox = (*objTransform)(this->orgBbox);
+    if (objTransform)
+        bbox = (*objTransform)(orgBbox);
     else
-        this->bbox = this->orgBbox;
+        bbox = orgBbox;
 
 }
 
 void Triangle::PerformVertexModification()
 {
-    this->v0->n += this->normal;
-    this->v0->refCount++;
-    this->v1->n += this->normal;
-    this->v1->refCount++;
-    this->v2->n += this->normal;
-    this->v2->refCount++;
+    v0->n += normal;
+    v0->refCount++;
+    v1->n += normal;
+    v1->refCount++;
+    v2->n += normal;
+    v2->refCount++;
 }
 
 void Triangle::RegulateVertices()
 {
     if(this->v0->refCount != 0)
     {
-        //this->v0->n /= this->v0->refCount;
-        this->v0->n = Normalize(this->v0->n);
-        this->v0->refCount = 0;
+        v0->n = Normalize(v0->n);
+        v0->refCount = 0;
     }
     if (this->v1->refCount != 0)
     {
-        //this->v1->n /= this->v1->refCount;
-        this->v1->n = Normalize(this->v1->n);
-        this->v1->refCount = 0;
+        v1->n = Normalize(v1->n);
+        v1->refCount = 0;
     }
     if (this->v2->refCount != 0)
     {
-        // this->v2->n /= this->v2->refCount;
-        this->v2->n = Normalize(this->v2->n);
-        this->v2->refCount = 0;
+        v2->n = Normalize(v2->n);
+        v2->refCount = 0;
     }
 }
 
@@ -130,26 +115,26 @@ Vector3f Triangle::GetChangedNormal(const SurfaceIntersection &intersection) con
 void Triangle::Intersect(Ray &rr, SurfaceIntersection &rt)
 {
     Ray* r; // Ray to use in intersection test
-    if (false && Scene::debugCurrent >= Scene::debugBegin && Scene::debugCurrent <= Scene::debugEnd && this->ownerMesh != this)
+    if (false && Scene::debugCurrent >= Scene::debugBegin && Scene::debugCurrent <= Scene::debugEnd && ownerMesh != this)
     {
         std::cout << "Before Transformation Ray Stats: --- \n"
                     << r->o
                     << r->d;
         std::cout << "Operating with transformation matrices: --- \n"
-                    << "plain: " << this->objTransform->transformationMatrix
-                    << "inv: " << this->objTransform->invTransformationMatrix;
+                    << "plain: " << objTransform->transformationMatrix
+                    << "inv: " << objTransform->invTransformationMatrix;
     }
 
     Ray transformedRay;
 
-    if(this->ownerMesh == this || !this->activeMotion) // Not owned by a mesh
+    if(ownerMesh == this || !activeMotion) // Not owned by a mesh
     {
-        if(this->activeMotion)
+        if(activeMotion)
         {
-            Vector3f motBlurToRay = this->motionBlur * rr.time;
+            Vector3f motBlurToRay = motionBlur * rr.time;
             Transformation tr = Translation(-1, (glm::vec3)motBlurToRay);
 
-            Transform lastTransform = (*this->objTransform)(tr);
+            Transform lastTransform = (*objTransform)(tr);
 
             transformedRay = (lastTransform)(rr, false);
 
@@ -157,34 +142,34 @@ void Triangle::Intersect(Ray &rr, SurfaceIntersection &rt)
         }
         else
         {
-            transformedRay = (*this->objTransform)(rr, false);
+            transformedRay = (*objTransform)(rr, false);
             r = &transformedRay;
         }
 
     }
-    else if (rr.transformedModes.find(this->ownerMesh) != rr.transformedModes.end()) // Sibling has transformed the ray before
+    else if (rr.transformedModes.find(ownerMesh) != rr.transformedModes.end()) // Sibling has transformed the ray before
     {
-        r = (rr.transformedModes.at(this->ownerMesh));
+        r = (rr.transformedModes.at(ownerMesh));
     }
     else // First triangle in the mesh to transform the ray
     {
-        Vector3f motBlurToRay = this->motionBlur * rr.time;
+        Vector3f motBlurToRay = motionBlur * rr.time;
         Transformation tr = Translation(-1, (glm::vec3)motBlurToRay);
 
-        Transform* trr = new Transform((*this->objTransform)(tr));
+        Transform* trr = new Transform((*objTransform)(tr));
 
         Ray* resultingRay = new Ray((*trr)(rr, false));
         resultingRay->time = rr.time;
         resultingRay->currMat = rr.currMat;
         resultingRay->currShape = rr.currShape;
 
-        rr.InsertRay(this->ownerMesh, resultingRay);
-        rr.InsertTransform(this->ownerMesh, trr);
+        rr.InsertRay(ownerMesh, resultingRay);
+        rr.InsertTransform(ownerMesh, trr);
 
-        r = (rr.transformedModes.at(this->ownerMesh));
+        r = (rr.transformedModes.at(ownerMesh));
     }
 
-    if (false && Scene::debugCurrent >= Scene::debugBegin && Scene::debugCurrent <= Scene::debugEnd && this->ownerMesh != this)
+    if (false && Scene::debugCurrent >= Scene::debugBegin && Scene::debugCurrent <= Scene::debugEnd && ownerMesh != this)
     {
         std::cout << "After Transformation Ray Stats: --- \n"
                   << r->o
@@ -271,28 +256,28 @@ void Triangle::Intersect(Ray &rr, SurfaceIntersection &rt)
             normal = Normalize(normal);
         }
 
-        if(this->ownerMesh == this)
+        if(ownerMesh == this)
         {
-            if(this->activeMotion)
+            if(activeMotion)
             {
-                Vector3f motBlurToRay = this->motionBlur * rr.time;
+                Vector3f motBlurToRay = motionBlur * rr.time;
                 Transformation tr = Translation(-1, (glm::vec3)motBlurToRay);
 
-                Transform lastTransform = (*this->objTransform)(tr);
+                Transform lastTransform = (*objTransform)(tr);
                 trr = &lastTransform;
             }
             else
-                trr = this->objTransform;
+                trr = objTransform;
         }
         else
         {
-            if(this->activeMotion)
+            if(activeMotion)
             {
-                trr = (rr.transformMatrices.at(this->ownerMesh));
+                trr = (rr.transformMatrices.at(ownerMesh));
             }
             else
             {
-                trr = this->objTransform;
+                trr = objTransform;
             }
 
         }
@@ -308,7 +293,7 @@ void Triangle::Intersect(Ray &rr, SurfaceIntersection &rt)
 
         t = rr(po);
 
-        rt = SurfaceIntersection(lip, po, normal, uv, Normalize(rr.o - po), t, this->mat, this, this->ownerMesh, mColorChangerTexture, mNormalChangerTexture);
+        rt = SurfaceIntersection(lip, po, normal, uv, Normalize(rr.o - po), t, mat, this, ownerMesh, mColorChangerTexture, mNormalChangerTexture);
     }
 
 }
@@ -316,7 +301,6 @@ void Triangle::Intersect(Ray &rr, SurfaceIntersection &rt)
 Shape *Triangle::Clone(bool resetTransform) const
 {
     Triangle* cloned = new Triangle{};
-    cloned->shType = ShapeType::TRIANGLE;
 
     cloned->id = this->id;
     cloned->mat = this->mat;

@@ -108,8 +108,6 @@ void AreaLight::AssignLightFormulaVariables(const SurfaceIntersection &intersect
 
 Vector3f AreaLight::GetLightDirection(Vector3f) const
 {
-    // sampledPoint = GetRandomPointInSquare();
-
     return GetRandomPointInSquare();
 }
 

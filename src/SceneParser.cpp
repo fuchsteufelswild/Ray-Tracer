@@ -34,7 +34,8 @@ namespace actracer
 /*
  * TODO: Refactor method
  * Decompose into multiple functions that are responsible for
- * parsing specific types of elements
+ * parsing specific types of elements,
+ * convert strings into variables
  */ 
 Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 {
@@ -784,7 +785,7 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 		}
 
 		scene->objects.push_back(new Sphere(id, scene->materials[matIndex - 1], R, scene->vertices[cIndex - 1], objTransform));
-		scene->primitives.push_back(new Primitive(scene->objects.back(), scene->objects.back()->mat));
+		scene->primitives.push_back(new Primitive(scene->objects.back(), scene->objects.back()->GetMaterial()));
 
 		scene->objects.back()->SetTextures(colorChanger, normalChanger);
 
@@ -857,7 +858,7 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 
 		scene->objects.push_back(new Triangle(id, scene->materials[matIndex - 1], scene->vertices[p1Index - 1], scene->vertices[p2Index - 1], scene->vertices[p3Index - 1],
 											  scene->vertexCoords[p1Index - 1], scene->vertexCoords[p2Index - 1], scene->vertexCoords[p3Index - 1], nullptr));
-		scene->primitives.push_back(new Primitive(scene->objects.back(), scene->objects.back()->mat));
+		scene->primitives.push_back(new Primitive(scene->objects.back(), scene->objects.back()->GetMaterial()));
 
 		scene->objects.back()->SetTextures(colorChanger, normalChanger);
 
@@ -1092,7 +1093,7 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 			sscanf(str, "%f %f %f", &motBlur.x, &motBlur.y, &motBlur.z);
 		}
 
-		Shape *soughtMesh = scene->GetMeshWithID(baseMeshID, Shape::ShapeType::MESH);
+		Shape *soughtMesh = scene->GetMeshWithID(baseMeshID);
 
 		Shape *newMesh = soughtMesh->Clone(resetTransform);
 

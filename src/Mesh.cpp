@@ -10,19 +10,10 @@ namespace actracer {
 Mesh::Mesh(int _id, Material *_mat, const std::vector<std::pair<int, Material *>> &faces, const std::vector<Vector3f *> *pIndices, const std::vector<Vector2f *> *pUVs, Transform *objToWorld, ShadingMode shMode)
     : Shape(_id, _mat, objToWorld, shMode)
 {
-    shType = ShapeType::MESH;
-
     if (objTransform)
         objTransform->UpdateTransform();
-    if(objTransform->transformationMatrix != glm::mat4(1))
-        this->haveTransform = true;
 
-    if (objTransform->transformationMatrix[0][0] != objTransform->transformationMatrix[1][1] ||
-        objTransform->transformationMatrix[0][0] != objTransform->transformationMatrix[2][2] ||
-        objTransform->transformationMatrix[1][1] != objTransform->transformationMatrix[2][2])
-        this->nonUniformScaling = true;
-
-    triangles = new std::vector<Shape*>();
+    triangles = new std::vector<Triangle*>();
 
     meshVertices = new std::vector<Vertex*>();
 
@@ -30,9 +21,9 @@ Mesh::Mesh(int _id, Material *_mat, const std::vector<std::pair<int, Material *>
     float maxY = -1e9, minY = 1e9;
     float maxZ = -1e9, minZ = 1e9;
 
-    
     std::unordered_map<Vector3f*, Vertex*> vertexHash; 
 
+    // Fill up vertices to reuse
     for(int i = 0; i < faces.size(); ++i)
     {
         if (vertexHash.find(((*pIndices)[i * 3 + 0])) == vertexHash.end())
@@ -88,40 +79,59 @@ Mesh::Mesh(int _id, Material *_mat, const std::vector<std::pair<int, Material *>
         SetMin(minZ, zOfThree); //
     }
 
-    
-    this->orgBbox = BoundingVolume3f(Vector3f(maxX, maxY, maxZ), Vector3f(minX, minY, minZ));
+    orgBbox = BoundingVolume3f(Vector3f(maxX, maxY, maxZ), Vector3f(minX, minY, minZ));
 
-    if(this->objTransform)
-        this->bbox = (*objTransform)(this->orgBbox);
+    if(objTransform)
+        bbox = (*objTransform)(orgBbox);
     else
-        this->bbox = this->orgBbox;
+        bbox = orgBbox;
 
-
-    if(this->shadingMode == Shape::ShadingMode::SMOOTH)
+    if(shadingMode == Shape::ShadingMode::SMOOTH)
     {
-        for(Shape* sh : *(this->triangles))
+        for(Triangle* sh : *(triangles))
             sh->PerformVertexModification();
 
-        for(Shape* sh : *(this->triangles))
+        for(Triangle* sh : *(triangles))
             sh->RegulateVertices();
+    }
+}
+
+void Mesh::FindClosestObject(Ray &r, SurfaceIntersection &rt)
+{
+    float minT = std::numeric_limits<float>::max(); // Initialize min t with inf
+
+    for (Shape *shape : *triangles)
+    {
+        SurfaceIntersection io{};
+        shape->Intersect(r, io); // Find the surface of intersection
+
+        // If there is no intersection
+        if (!io.IsValid())
+            continue;
+
+        // Update the closest surface information and the minimum distance variable
+        if (io.t < minT && io.t > -Scene::pScene->intTestEps)
+        {
+            minT = io.t; // New minimum distance
+            rt = io;     // New closest surface
+        }
     }
 }
 
 void Mesh::Intersect(Ray &rr, SurfaceIntersection &rt)
 {
     Ray r = rr;
-    Shape::FindClosestObject(rr, *(this->triangles), rt);
+    FindClosestObject(rr, rt);
 }
 
 Shape* Mesh::Clone(bool resetTransform) const
 {
     Mesh* cloned = new Mesh{};
-    cloned->shType = ShapeType::MESH;
     cloned->id = this->id;
     cloned->mat = this->mat;
     cloned->orgBbox = this->orgBbox;
 
-    cloned->triangles = new std::vector<Shape*>();
+    cloned->triangles = new std::vector<Triangle*>();
 
     cloned->mColorChangerTexture = mColorChangerTexture;
     cloned->mNormalChangerTexture = mNormalChangerTexture;
@@ -139,14 +149,14 @@ Shape* Mesh::Clone(bool resetTransform) const
         cloned->bbox = this->orgBbox;
     }
     
-    for(Shape* tr : (*triangles)) // May add to primitives in this section
+    for(Shape* tr : (*triangles))
     {
-        cloned->triangles->push_back(tr->Clone(resetTransform));
-        cloned->triangles->back()->objTransform = cloned->objTransform;
-        cloned->triangles->back()->ownerMesh = cloned;
+        cloned->triangles->push_back(dynamic_cast<Triangle*>(tr->Clone(resetTransform)));
+        cloned->triangles->back()->SetObjectTransform(cloned->objTransform);
+        cloned->triangles->back()->SetOwnerMesh(cloned);
 
-        cloned->triangles->back()->mColorChangerTexture = mColorChangerTexture;
-        cloned->triangles->back()->mNormalChangerTexture = mNormalChangerTexture;
+        cloned->triangles->back()->SetColorChangerTexture(mColorChangerTexture);
+        cloned->triangles->back()->SetNormalChangerTexture(mNormalChangerTexture);
     }
     
     return cloned;
@@ -154,7 +164,7 @@ Shape* Mesh::Clone(bool resetTransform) const
 
 void Mesh::SetMaterial(Material* newMat)
 {
-    this->mat = newMat;
+    Shape::SetMaterial(newMat);
 
     for(Shape* t : (*triangles))
         t->SetMaterial(newMat);
@@ -167,8 +177,6 @@ void Mesh::SetTransformation(Transform* newTransform, bool owned)
     for(Shape* tr : (*triangles))
     {
         tr->SetTransformation(newTransform, true);
-        tr->haveTransform = this->haveTransform;
-        tr->nonUniformScaling = this->nonUniformScaling;
     }
 }
 
@@ -179,7 +187,7 @@ void Mesh::SetMotionBlur(const Vector3f& mb)
     for (Shape *tr : (*triangles))
     {
         tr->SetMotionBlur(mb);
-        tr->activeMotion = this->activeMotion;
+        tr->SetHasActiveMotion(this->activeMotion);
         Scene::pScene->primitives.push_back(new Primitive(tr, this->mat));
     }
 }

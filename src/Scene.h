@@ -69,7 +69,7 @@ public:
     std::vector<Shape *> objects;       // All shapes in the scene
     std::vector<Vertex*> tVertices;     // All triangle vertices in the scene
     std::vector<Primitive*> primitives; // All primitives in the scene
-    std::vector<BRDFBase*> brdfs; // all brdfs
+    std::vector<BRDFBase*> brdfs;       // all brdfs
     
     std::vector<Scaling*> scalings;
     std::vector<Rotation *> rotations;
@@ -109,7 +109,7 @@ private:
     Color RenderPixel(Camera* cam, int row, int col);
 
     void ComputeTransformMatrix(const char* str, Transform& tr);
-    Shape *GetMeshWithID(int id, Shape::ShapeType shapeType);
+    Shape *GetMeshWithID(int id);
 
     void ComputeTiltedGlossyReflectionRay(Vector3f &vrd, const Material* intersectionMat); // Get glossy
 };

@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
     RenderStrategy* renderer = new DefaultRenderer();
 	std::cout << "Scene is parsed\n";
 	system("pause");
-    renderer->RenderSceneIntoPPM(currentScene);
+    renderer->RenderSceneIntoPPM(currentScene); // Main method call
     system("pause");
 
 	delete renderer;

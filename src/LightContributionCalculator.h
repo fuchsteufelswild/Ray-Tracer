@@ -33,11 +33,11 @@ public:
     float GetShadownRayEpsilon() const;
 public:
     /*
-     * columnOverWidth -> ColumnPosition Mapped to 01: column / width
-     * rowOverHeight -> RowPosition Mapped to 01: row / height
+     * columnNormalized01 -> ColumnPosition Mapped to 01: column / width
+     * rowNormalized01 -> RowPosition Mapped to 01: row / height
      * depth -> reflection/refraction Depth
      */
-    bool CalculateLight(Ray &cameraRay, Vector3f &outColor, int depth, float ctw = 0, float rth = 0) const;
+    bool CalculateLight(Ray &cameraRay, Vector3f &outColor, int depth, float columnNormalized01 = 0, float rowNormalized01 = 0) const;
 
     void SetSceneLights(const std::vector<Light*>& lights, const Vector3f& ambientLightColor, const Vector3f& backgroundColor, const Texture* backgroundTexture);
     void SetSceneAccelerator(const AccelerationStructure& accelerator);

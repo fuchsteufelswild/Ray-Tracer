@@ -21,7 +21,7 @@ public:
     Primitive(Shape* shape, Material* mat)
         : containedShape(shape), containedMaterial(mat) 
     { 
-        this->bbox = shape->bbox; 
+        this->bbox = shape->GetBoundingBox(); 
         mID = ++id;
     }
 

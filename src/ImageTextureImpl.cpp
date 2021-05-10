@@ -143,8 +143,8 @@ void ImageTextureImpl::AssignCombinedMatrixRows(const Triangle &triangle, glm::v
 glm::mat3x2 ImageTextureImpl::ComputePositionEdgeMatrixInWorldSpace(const Triangle &triangle) const
 {
     // Transform into world space
-    Vector3f p0p1t = (*triangle.objTransform)(-triangle.GetEdgeVectorFromFirstToSecondVertex(), true);
-    Vector3f p0p2t = (*triangle.objTransform)(-triangle.GetEdgeVectorFromFirstToThirdVertex(), true);
+    Vector3f p0p1t = (*triangle.GetObjectTransform())(-triangle.GetEdgeVectorFromFirstToSecondVertex(), true);
+    Vector3f p0p2t = (*triangle.GetObjectTransform())(-triangle.GetEdgeVectorFromFirstToThirdVertex(), true);
 
     glm::vec3 firstEdgeVectorWorldSpace = p0p1t;
     glm::vec3 secondEdgeVectorWorldSpace = p0p2t;

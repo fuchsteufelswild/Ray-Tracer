@@ -16,8 +16,6 @@ private:
     // Precalculated edge vectors
     Vector3f p0p1;  
     Vector3f p0p2; 
-
-    float surfaceArea;
 public:
     Triangle(int _id, Material *_mat, const Vector3f &p0, const Vector3f &p1, const Vector3f &p2, 
              const Vector2f &uv0, const Vector2f &uv1, const Vector2f &uv2, Transform *objToWorld = nullptr, Shape *_m = nullptr, 
@@ -42,8 +40,8 @@ public:
 
     void ModifyVertices();
 
-    void PerformVertexModification() override;
-    void RegulateVertices() override;
+    void PerformVertexModification();
+    void RegulateVertices();
 
     void Intersect(Ray& r, SurfaceIntersection& rt) override;
     Shape *Clone(bool resetTransform) const override;
