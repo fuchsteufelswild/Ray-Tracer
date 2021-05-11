@@ -112,75 +112,87 @@ Vector3f Triangle::GetChangedNormal(const SurfaceIntersection &intersection) con
     return intersection.n;
 }
 
-void Triangle::Intersect(Ray &rr, SurfaceIntersection &rt)
+void Triangle::Intersect(Ray &rr, SurfaceIntersection &rt, float intersectionTestEpsilon)
 {
-    Ray* r; // Ray to use in intersection test
-    if (false && Scene::debugCurrent >= Scene::debugBegin && Scene::debugCurrent <= Scene::debugEnd && ownerMesh != this)
+    Ray transformedRay = rr; // Ray to use in intersection test
+    TransformRayIntoObjectSpace(rr, transformedRay);
+
+    float t, beta, gamma;
+    bool hasIntersected;
+    CalculateTValueForIntersection(transformedRay, hasIntersected, t, beta, gamma, intersectionTestEpsilon);
+
+    // Check if t value is in the front
+    if (hasIntersected && t >= -intersectionTestEpsilon)
     {
-        std::cout << "Before Transformation Ray Stats: --- \n"
-                    << r->o
-                    << r->d;
-        std::cout << "Operating with transformation matrices: --- \n"
-                    << "plain: " << objTransform->transformationMatrix
-                    << "inv: " << objTransform->invTransformationMatrix;
+        Vector3f intersectionPoint = (transformedRay)(t);
+        Vector3f surfaceNormal = this->normal;
+        Vector3f localIntersectionPoint = intersectionPoint;
+
+        Vector2f uv;
+        CalculateSurfaceValues(1 + intersectionTestEpsilon, beta, gamma, uv, surfaceNormal);
+        TransformSurfaceValues(rr, transformedRay, intersectionPoint, surfaceNormal);
+
+        t = rr(intersectionPoint);
+
+        rt = SurfaceIntersection(localIntersectionPoint, intersectionPoint, surfaceNormal, uv, Normalize(rr.o - intersectionPoint), t, mat, this, ownerMesh, mColorChangerTexture, mNormalChangerTexture);
     }
+}
 
-    Ray transformedRay;
-
-    if(ownerMesh == this || !activeMotion) // Not owned by a mesh
+void Triangle::TransformRayIntoObjectSpace(Ray &baseRay, Ray &r) const
+{
+    if(IsOwnedByComposite())
     {
-        if(activeMotion)
+        if(HasRayTransformedBefore(baseRay))
         {
-            Vector3f motBlurToRay = motionBlur * rr.time;
-            Transformation tr = Translation(-1, (glm::vec3)motBlurToRay);
-
-            Transform lastTransform = (*objTransform)(tr);
-
-            transformedRay = (lastTransform)(rr, false);
-
-            r = &transformedRay;
+            r = *(baseRay.transformedModes.at(ownerMesh));
         }
         else
         {
-            transformedRay = (*objTransform)(rr, false);
-            r = &transformedRay;
+            if(activeMotion)
+                TransformAndRecordRay(baseRay, r);
+            else
+                r = (*objTransform)(r, false);
         }
-
     }
-    else if (rr.transformedModes.find(ownerMesh) != rr.transformedModes.end()) // Sibling has transformed the ray before
+    else
     {
-        r = (rr.transformedModes.at(ownerMesh));
+        Shape::TransformRayIntoObjectSpace(r);
     }
-    else // First triangle in the mesh to transform the ray
-    {
-        Vector3f motBlurToRay = motionBlur * rr.time;
-        Transformation tr = Translation(-1, (glm::vec3)motBlurToRay);
+}
 
-        Transform* trr = new Transform((*objTransform)(tr));
+bool Triangle::HasRayTransformedBefore(Ray &r) const
+{
+    return r.transformedModes.find(ownerMesh) != r.transformedModes.end();
+}
 
-        Ray* resultingRay = new Ray((*trr)(rr, false));
-        resultingRay->time = rr.time;
-        resultingRay->currMat = rr.currMat;
-        resultingRay->currShape = rr.currShape;
+void Triangle::TransformAndRecordRay(Ray& baseRay, Ray &r) const
+{
+    Vector3f timeExtendedMotionBlur = motionBlur * baseRay.time;
+    Transformation motionBlurTranslation = Translation(-1, (glm::vec3)timeExtendedMotionBlur);
 
-        rr.InsertRay(ownerMesh, resultingRay);
-        rr.InsertTransform(ownerMesh, trr);
+    Transform *objectTransformExtendedWithMotionBlurMove = new Transform((*objTransform)(motionBlurTranslation));
 
-        r = (rr.transformedModes.at(ownerMesh));
-    }
+    Ray *resultingRay = new Ray((*objectTransformExtendedWithMotionBlurMove)(baseRay, false));
+    resultingRay->time = baseRay.time;
+    resultingRay->currMat = baseRay.currMat;
+    resultingRay->currShape = baseRay.currShape;
 
-    if (false && Scene::debugCurrent >= Scene::debugBegin && Scene::debugCurrent <= Scene::debugEnd && ownerMesh != this)
-    {
-        std::cout << "After Transformation Ray Stats: --- \n"
-                  << r->o
-                  << r->d;
-    }
+    baseRay.InsertRay(ownerMesh, resultingRay);
+    baseRay.InsertTransform(ownerMesh, objectTransformExtendedWithMotionBlurMove);
 
-    Vector3f r1 = {p0p1.x, p0p2.x, r->d.x};
-    Vector3f r2 = {p0p1.y, p0p2.y, r->d.y};
-    Vector3f r3 = {p0p1.z, p0p2.z, r->d.z};
+    r = *(baseRay.transformedModes.at(ownerMesh));
+}
 
-    Vector3f p0ro = {v0->p.x - r->o.x, v0->p.y - r->o.y, v0->p.z - r->o.z}; // Precalculate commonly used vector
+void Triangle::CalculateTValueForIntersection(const Ray &r, bool &hasIntersected, float &t, float &beta, float &gamma, float intersectionTestEpsilon) const
+{
+    hasIntersected = false;
+    t = 0;
+
+    Vector3f r1 = {p0p1.x, p0p2.x, r.d.x};
+    Vector3f r2 = {p0p1.y, p0p2.y, r.d.y};
+    Vector3f r3 = {p0p1.z, p0p2.z, r.d.z};
+
+    Vector3f p0ro = {v0->p.x - r.o.x, v0->p.y - r.o.y, v0->p.z - r.o.z}; // Precalculate commonly used vector
 
     float detM = r1.x * (r2.y * r3.z - r2.z * r3.y) + r2.x * (r1.z * r3.y - r1.y * r3.z) + r3.x * (r1.y * r2.z - r1.z * r2.y); // Main determinant
 
@@ -199,10 +211,10 @@ void Triangle::Intersect(Ray &rr, SurfaceIntersection &rt)
 
     float v1 = det1 * invDetM; // beta val
 
-    float err = 1 + Scene::pScene->intTestEps; // Calculate 1 + error rate once
+    float err = 1 + intersectionTestEpsilon; // Calculate 1 + error rate once
 
     // Check bounds
-    if(v1 < -Scene::pScene->intTestEps || v1 > err)
+    if (v1 < -intersectionTestEpsilon || v1 > err)
         return; // Default value no intersection
 
     r1.x = p0p1.x;
@@ -218,7 +230,7 @@ void Triangle::Intersect(Ray &rr, SurfaceIntersection &rt)
     float v2 = det2 * invDetM; // gamma val
 
     // Check bounds
-    if (v2 < -Scene::pScene->intTestEps || v2 > err || v1 + v2 > err)
+    if (v2 < -intersectionTestEpsilon || v2 > err || v1 + v2 > err)
         return; // Default value no intersection
 
     r1.y = p0p2.x;
@@ -231,74 +243,65 @@ void Triangle::Intersect(Ray &rr, SurfaceIntersection &rt)
 
     float det3 = r1.x * (r2.y * r3.z - r2.z * r3.y) + r2.x * (r1.z * r3.y - r1.y * r3.z) + r3.x * (r1.y * r2.z - r1.z * r2.y);
 
-    float t = det3 * invDetM; // Derive t
+    hasIntersected = true;
+    t = det3 * invDetM;
+    beta = v1;
+    gamma = v2;
+}
 
-    // Check if t value is in the front
-    if (t >= -Scene::pScene->intTestEps)
+void Triangle::CalculateSurfaceValues(const float epsilon, const float beta, const float gamma, Vector2f &uv, Vector3f &surfaceNormal) const
+{
+    uv = v0->uv * (epsilon - beta - gamma) +
+         v1->uv * beta +
+         v2->uv * gamma;
+
+    if (shadingMode == Shape::ShadingMode::SMOOTH)
     {
-        // Transforming normal and intersection point mistake
-        // not setting 1.0f at the end
-        Vector3f po = (*r)(t); // Get intersection point using parameter t
-        Vector3f normal = this->normal;
+        surfaceNormal = v0->n * (epsilon - beta - gamma) +
+                        v1->n * beta +
+                        v2->n * gamma;
 
-        Vector2f uv;
-        Transform *trr = this->objTransform;
-        uv = this->v0->uv * (err - v1 - v2) +
-             this->v1->uv * v1 +
-             this->v2->uv * v2;
+        surfaceNormal = Normalize(surfaceNormal);
+    }
+}
 
-        if(this->shadingMode == Shape::ShadingMode::SMOOTH)
+void Triangle::TransformSurfaceValues(const Ray &baseRay, const Ray &transformedRay, Vector3f &intersectionPoint, Vector3f &surfaceNormal) const
+{
+    Transform tempTransform{};
+    Transform* extendedTransform;
+
+    if (IsOwnedByComposite())
+    {
+        if (activeMotion)
+            extendedTransform = (baseRay.transformMatrices.at(ownerMesh));
+        else
+            extendedTransform = objTransform;
+    }
+    else
+    {
+        if(activeMotion)
         {
-            normal = this->v0->n * (err - v1 - v2) +
-                     this->v1->n * v1 +
-                     this->v2->n * v2;
+            Vector3f timeExtendedMotionBlur = motionBlur * baseRay.time; // [0, 0, 0] - [motionBlur.x, motionBlur.y, motionBlur.z]
+            Transformation motionBlurTranslation = Translation(-1, (glm::vec3)timeExtendedMotionBlur);
 
-            normal = Normalize(normal);
-        }
-
-        if(ownerMesh == this)
-        {
-            if(activeMotion)
-            {
-                Vector3f motBlurToRay = motionBlur * rr.time;
-                Transformation tr = Translation(-1, (glm::vec3)motBlurToRay);
-
-                Transform lastTransform = (*objTransform)(tr);
-                trr = &lastTransform;
-            }
-            else
-                trr = objTransform;
+            tempTransform = (*objTransform)(motionBlurTranslation); // Update transform omitted
+            extendedTransform = &tempTransform;
         }
         else
         {
-            if(activeMotion)
-            {
-                trr = (rr.transformMatrices.at(ownerMesh));
-            }
-            else
-            {
-                trr = objTransform;
-            }
-
+            extendedTransform = objTransform;
         }
-
-        Vector3f lip = po;
-
-        if(trr->transformationMatrix != glm::mat4(1))
-        {
-            po = (*trr)(Vector4f(po, 1.0f), true);
-            normal = (*trr)(Vector4f(normal, 0.0f), true, true); // !!!!!!!! was this->normal
-            normal = Normalize(normal); 
-        }
-
-        t = rr(po);
-
-        rt = SurfaceIntersection(lip, po, normal, uv, Normalize(rr.o - po), t, mat, this, ownerMesh, mColorChangerTexture, mNormalChangerTexture);
     }
 
+    if (extendedTransform->transformationMatrix != glm::mat4(1))
+    {
+        intersectionPoint = (*extendedTransform)(Vector4f(intersectionPoint, 1.0f), true);
+        surfaceNormal = (*extendedTransform)(Vector4f(surfaceNormal, 0.0f), true, true); // !!!!!!!! was this->normal
+        surfaceNormal = Normalize(surfaceNormal);
+    }
 }
 
-Shape *Triangle::Clone(bool resetTransform) const
+Triangle *Triangle::Clone(bool resetTransform) const
 {
     Triangle* cloned = new Triangle{};
 

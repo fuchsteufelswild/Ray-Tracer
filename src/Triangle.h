@@ -34,17 +34,24 @@ public:
     const Vertex* GetThirdVertex() const;
 
     const Vector3f& GetNormal() const;
-
 public:
-
-
     void ModifyVertices();
 
     void PerformVertexModification();
     void RegulateVertices();
 
-    void Intersect(Ray& r, SurfaceIntersection& rt) override;
-    Shape *Clone(bool resetTransform) const override;
+    void Intersect(Ray &r, SurfaceIntersection &rt, float intersectionTestEpsilon) override;
+    Triangle *Clone(bool resetTransform) const override;
+private:
+    void TransformRayIntoObjectSpace(Ray &baseRay, Ray &r) const;
+    bool HasRayTransformedBefore(Ray& r) const;
+
+    void TransformAndRecordRay(Ray &baseRay, Ray &r) const;
+
+    void CalculateTValueForIntersection(const Ray &r, bool &hasIntersected, float &t, float &beta, float &gamma, float intersectionTestEpsilon) const;
+    void TransformSurfaceValues(const Ray &baseRay, const Ray &transformedRay, Vector3f &intersectionPoint, Vector3f &surfaceNormal) const;
+
+    void CalculateSurfaceValues(const float epsilon, const float beta, const float gamma, Vector2f &uv, Vector3f &surfaceNormal) const;
 };
 
 inline const Vector3f& Triangle::GetNormal() const

@@ -38,7 +38,7 @@ void Shape::SetTransformation(Transform *newTransform, bool owned)
     bbox = (*(objTransform))(orgBbox);
 }
 
-void Shape::SetMotionBlur(const Vector3f& motBlur) 
+void Shape::SetMotionBlur(const Vector3f &motBlur, std::vector<Primitive *> &primitives)
 { 
     activeMotion = false;
     
@@ -63,24 +63,22 @@ void Shape::AdaptWorldBoundingBoxForMotionBlur(const Vector3f& motBlur)
 
     bbox = Merge(bbox, movedBoundingBoxWithMotionBlur); // Extend bounding box with motion blur
 }
- 
-void Shape::TransformaRayIntoObjectSpace(Ray &r) const
+
+void Shape::TransformRayIntoObjectSpace(Ray &r) const
 {
     if(!objTransform) return;
 
-    if(IsMotionBlurActive())
+    if (IsMotionBlurActive())
     {
         Vector3f timeExtendedMotionBlur = motionBlur * r.time; // [0, 0, 0] - [motionBlur.x, motionBlur.y, motionBlur.z]
         Transformation motionBlurTranslation = Translation(-1, (glm::vec3)timeExtendedMotionBlur);
 
         Transform objectTransformExtendedWithMotionBlurMove = (*objTransform)(motionBlurTranslation); // Update transform omitted
 
-        r = (objectTransformExtendedWithMotionBlurMove)(r, false);
-    }   
-    else 
-    {
-        r = (*objTransform)(r, false);
+        r = objectTransformExtendedWithMotionBlurMove(r, false);
     }
+    else
+        r = (*this->objTransform)(r, false);
 }
 
 

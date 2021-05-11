@@ -23,13 +23,13 @@ Vector3f PerlinTextureImpl::GetReplacedNormal(const SurfaceIntersection &interse
     return {};
 }
 
-PerlinTextureImpl::PerlinTextureImpl(float bumpFactor, float noiseScale, NoiseConversionType method)
+PerlinTextureImpl::PerlinTextureImpl(float bumpFactor, float noiseScale, NoiseConversionType method, std::default_random_engine& generator)
     : TextureImpl(bumpFactor), mNoiseScale(noiseScale), mConversionMethod(method)
 {
     for (int i = 0; i < mTableSize; i++)
         mIndices.push_back(i);
 
-    std::shuffle(mIndices.begin(), mIndices.end(), Scene::pScene->generator);
+    std::shuffle(mIndices.begin(), mIndices.end(), generator);
 }
 
 Vector3f PerlinTextureImpl::GetBumpedNormal(const SurfaceIntersection &intersectedSurfaceInformation, const Triangle *triangle) const

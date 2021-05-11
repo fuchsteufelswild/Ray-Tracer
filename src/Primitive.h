@@ -25,7 +25,7 @@ public:
         mID = ++id;
     }
 
-    SurfaceIntersection Intersect(Ray& r, SurfaceIntersection& rt);
+    SurfaceIntersection Intersect(Ray& r, SurfaceIntersection& rt, float intersectionTestEpsilon);
 public:
     BoundingVolume3f bbox; 
 };

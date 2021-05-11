@@ -2,9 +2,9 @@
 
 namespace actracer {
 
-SurfaceIntersection Primitive::Intersect(Ray &r, SurfaceIntersection &rt) 
+SurfaceIntersection Primitive::Intersect(Ray &r, SurfaceIntersection &rt, float intersectionTestEpsilon) 
 { 
-    containedShape->Intersect(r, rt); 
+    containedShape->Intersect(r, rt, intersectionTestEpsilon); 
 }
 
 }

@@ -18,7 +18,7 @@ public:
      * Checks if given ray intersects with any of the primitives exist in the scene.
      * If so, puts the closest "Valid" SurfaceIntersection information into passed parameter
      */ 
-    virtual void Intersect(Ray &cameraRay, SurfaceIntersection& intersectedSurfaceInformation) const = 0;
+    virtual void Intersect(Ray &cameraRay, SurfaceIntersection& intersectedSurfaceInformation, float intersectionTestEpsilon) const = 0;
 protected:
     AccelerationStructure() { }
 protected:

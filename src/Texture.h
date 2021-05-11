@@ -41,7 +41,7 @@ friend class ImageTextureImpl;
 
 public:
     void SetupImageTexture(const std::string &imagePath, float bumpFactor, int normalizer, ImageType imageType, InterpolationMethodCode interpolationMethod);
-    void SetupPerlinTexture(float bumpFactor, float noiseScale, NoiseConversionType method);
+    void SetupPerlinTexture(float bumpFactor, float noiseScale, NoiseConversionType method, std::default_random_engine& generator);
 
     bool IsValid() const;
 public:

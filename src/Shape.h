@@ -15,6 +15,7 @@ class NormalChangerTexture;
 
 class Material;
 class Texture;
+class Primitive;
 
 class Shape {
 public:
@@ -23,19 +24,22 @@ public:
     virtual void SetTextures(const ColorChangerTexture *colorChangerTexture, const NormalChangerTexture *normalChangerTexture);
     virtual void SetMaterial(Material *newMaterial);
     virtual void SetTransformation(Transform *newTransform, bool owned = false);
-    virtual void SetMotionBlur(const Vector3f &motBlur);
+    virtual void SetMotionBlur(const Vector3f &motBlur, std::vector<Primitive *> &primitives);
 public:
     virtual Vector3f GetChangedNormal(const SurfaceIntersection &intersection) const {}
-    virtual void Intersect(Ray &r, SurfaceIntersection& rt) = 0;
+    virtual void Intersect(Ray &r, SurfaceIntersection &rt, float intersectionTestEpsilon) = 0;
     virtual Shape *Clone(bool resetTransform) const = 0;
 
-    virtual void TransformaRayIntoObjectSpace(Ray& r) const;
+    virtual void TransformRayIntoObjectSpace(Ray& r) const;
 protected:
     Shape(int _id, Material* _mat, Transform* objToWorld = nullptr, ShadingMode shMode = ShadingMode::DEFAULT);
     Shape() { }
 
     void AdaptWorldBoundingBoxForMotionBlur(const Vector3f& motBlur);
     bool IsMotionBlurActive() const;
+    bool IsOwnedByComposite() const;
+
+    Transform GetMotionBlurExtendedTransform(float time) const;
 public:
     int GetID() const;
     Material* GetMaterial() const;
@@ -107,6 +111,11 @@ inline void Shape::SetNormalChangerTexture(const NormalChangerTexture *normalCha
 inline bool Shape::IsMotionBlurActive() const
 {
     return motionBlur.x != 0 || motionBlur.y != 0 || motionBlur.z != 0;
+}
+
+inline bool Shape::IsOwnedByComposite() const
+{
+    return ownerMesh != this;
 }
 
 }

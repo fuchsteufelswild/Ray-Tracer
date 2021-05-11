@@ -62,17 +62,17 @@ private:
     void Clear(BVHNode *head);
     
 public:
-    virtual void Intersect(Ray &cameraRay, SurfaceIntersection &intersectedSurfaceInformation) const override;
+    virtual void Intersect(Ray &cameraRay, SurfaceIntersection &intersectedSurfaceInformation, float intersectionTestEpsilon) const override;
 
     BVHTree(int mpc, int pc, const std::vector<Primitive*>& prims);
     ~BVHTree();
 
 private:
     BVHNode *root;
-    void IntersectThroughHierarchy(BVHNode *head, Ray& cameraRay, SurfaceIntersection& intersectedSurfaceInformation) const;
+    void IntersectThroughHierarchy(BVHNode *head, Ray &cameraRay, SurfaceIntersection &intersectedSurfaceInformation, float intersectionTestEpsilon) const;
     // No need for polymorphic node structure, only two exists
-    void ProcessIntersectionForLeafNode(const BVHNode *head, Ray &r, SurfaceIntersection &rt) const;
-    void ProcessIntersectionForInternalNode(const BVHNode *head, Ray &r, SurfaceIntersection &rt) const;
+    void ProcessIntersectionForLeafNode(const BVHNode *head, Ray &r, SurfaceIntersection &rt, float intersectionTestEpsilon) const;
+    void ProcessIntersectionForInternalNode(const BVHNode *head, Ray &r, SurfaceIntersection &rt, float intersectionTestEpsilon) const;
 };
 
 }

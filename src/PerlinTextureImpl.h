@@ -17,7 +17,7 @@ enum class NoiseConversionType
 class PerlinTextureImpl : public Texture::TextureImpl
 {
 public:
-    PerlinTextureImpl(float bumpFactor, float noiseScale, NoiseConversionType method);
+    PerlinTextureImpl(float bumpFactor, float noiseScale, NoiseConversionType method, std::default_random_engine &generator);
 
     virtual Vector3f RetrieveRGBFromUV(float u, float v, float z) const override;
 

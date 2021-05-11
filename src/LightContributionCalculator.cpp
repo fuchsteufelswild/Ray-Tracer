@@ -46,7 +46,7 @@ void LightContributionCalculator::SetRenderParameters(int maximumRecursionDepth,
 bool LightContributionCalculator::CalculateLight(Ray &cameraRay, Vector3f &outColor, int depth, float columnNormalized01, float rowNormalized01) const
 {
     SurfaceIntersection intersection{};
-    accelerator->Intersect(cameraRay, intersection);
+    accelerator->Intersect(cameraRay, intersection, this->intersectionTestEpsilon);
 
     if (intersection.IsValid())
     {
@@ -131,7 +131,7 @@ bool LightContributionCalculator::IsThereAnObjectBetweenLightAndIntersectionPoin
 {
     SurfaceIntersection closestObjectInPath{};
     Ray tempRay = Ray(intersection.ip + intersection.n * shadowRayEpsilon, pointToLight, nullptr, nullptr, rayTime);
-    accelerator->Intersect(tempRay, closestObjectInPath);
+    accelerator->Intersect(tempRay, closestObjectInPath, this->intersectionTestEpsilon);
 
     if (closestObjectInPath.IsValid())                                                                                                                       
     {

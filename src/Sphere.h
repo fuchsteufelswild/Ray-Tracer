@@ -17,7 +17,7 @@ public:
 public:
     float GetRadius() const;
 public:
-    void Intersect(Ray &r, SurfaceIntersection &rt) override;
+    void Intersect(Ray &r, SurfaceIntersection &rt, float intersectionTestEpsilon) override;
     Shape* Clone(bool resetTransform) const override;
 private:
     void CalculateTValueForIntersection(const Ray &r, bool &hasIntersected, float &t) const;

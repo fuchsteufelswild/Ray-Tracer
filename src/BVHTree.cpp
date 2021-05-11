@@ -152,12 +152,12 @@ namespace actracer {
         return currentNode;
     }
 
-    void BVHTree::Intersect(Ray &cameraRay, SurfaceIntersection &intersectedSurfaceInformation) const
+    void BVHTree::Intersect(Ray &cameraRay, SurfaceIntersection &intersectedSurfaceInformation, float intersectionTestEpsilon) const
     {
-        IntersectThroughHierarchy(this->root, cameraRay, intersectedSurfaceInformation);
+        IntersectThroughHierarchy(this->root, cameraRay, intersectedSurfaceInformation, intersectionTestEpsilon);
     }
- 
-    void BVHTree::IntersectThroughHierarchy(BVHNode *head, Ray &r, SurfaceIntersection &rt) const
+
+    void BVHTree::IntersectThroughHierarchy(BVHNode *head, Ray &r, SurfaceIntersection &rt, float intersectionTestEpsilon) const
     {
         if(head == nullptr)
             return;
@@ -165,21 +165,21 @@ namespace actracer {
         if(head->bbox.Intersect(r, tn, tf)) // Test if ray intersects with the bounding box
         {
             if(head->IsLeaf())
-                ProcessIntersectionForLeafNode(head, r, rt);
+                ProcessIntersectionForLeafNode(head, r, rt, intersectionTestEpsilon);
             else
-                ProcessIntersectionForInternalNode(head, r, rt);
+                ProcessIntersectionForInternalNode(head, r, rt, intersectionTestEpsilon);
         }
     }
 
     /*
      * Loops through all primitives that are contained in this leaf node and picks the closest one
-     */ 
-    void BVHTree::ProcessIntersectionForLeafNode(const BVHNode *head, Ray& r, SurfaceIntersection& rt) const
+     */
+    void BVHTree::ProcessIntersectionForLeafNode(const BVHNode *head, Ray &r, SurfaceIntersection &rt, float intersectionTestEpsilon) const
     {
         for (int i = head->startIndex; i < head->endIndex; ++i)
         {
             SurfaceIntersection t{};
-            primitives[i]->Intersect(r, t);
+            primitives[i]->Intersect(r, t, intersectionTestEpsilon);
 
             if (t.IsValid() && 
                 t.t > 0 && t.t < rt.t - 0.001f) // Closer
@@ -189,12 +189,12 @@ namespace actracer {
         }
     }
 
-    void BVHTree::ProcessIntersectionForInternalNode(const BVHNode *head, Ray &r, SurfaceIntersection &rt) const
+    void BVHTree::ProcessIntersectionForInternalNode(const BVHNode *head, Ray &r, SurfaceIntersection &rt, float intersectionTestEpsilon) const
     {
         SurfaceIntersection leftIntersection{};
         SurfaceIntersection rightIntersection{};
-        IntersectThroughHierarchy(head->left, r, leftIntersection);   // Check left node
-        IntersectThroughHierarchy(head->right, r, rightIntersection); // Check right node
+        IntersectThroughHierarchy(head->left, r, leftIntersection, intersectionTestEpsilon); // Check left node
+        IntersectThroughHierarchy(head->right, r, rightIntersection, intersectionTestEpsilon); // Check right node
 
         // Pick the closest
         if (leftIntersection.IsValid() && rightIntersection.IsValid())

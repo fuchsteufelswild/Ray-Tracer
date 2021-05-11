@@ -66,6 +66,9 @@ Vector3f SpotLight::GetLightIntensityAtPoint(const Vector3f &pointToLight, const
     float theta = std::acos(-Dot(pointToLight, lightDirection));
     float falloff = (std::cos(theta) - cosAngle) / (std::cos(falloffAngle * deg2radians / 2) - cosAngle);
 
+    if(theta * rad2deg > coverageAngle / 2)
+        return {};
+
     Vector3f fadedLightIntenstiy = lightIntenstiy / (distanceToLight * distanceToLight);
     if (theta * rad2deg > falloffAngle / 2)
         fadedLightIntenstiy *= falloff;

@@ -28,10 +28,10 @@ Vector3f Sphere::GetChangedNormal(const SurfaceIntersection &intersection) const
     return intersection.n;
 }
 
-void Sphere::Intersect(Ray &rr, SurfaceIntersection &rt)
+void Sphere::Intersect(Ray &rr, SurfaceIntersection &rt, float intersectionTestEpsilon)
 {
     Ray r = rr;
-    TransformaRayIntoObjectSpace(r);
+    TransformRayIntoObjectSpace(r);
 
     bool hasIntersected;
     float ot;

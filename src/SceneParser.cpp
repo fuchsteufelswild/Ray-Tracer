@@ -548,7 +548,7 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 						}
 					}
 
-					createdTexture->SetupPerlinTexture(bumpFactor, noiseScale, nct);
+					createdTexture->SetupPerlinTexture(bumpFactor, noiseScale, nct, scene->generator);
 					// scene->textures.push_back(new PerlinTexture(id, decalMode, bumpFactor, noiseScale, nct));
 				}
 				else if (strcmp(attrType, "image") == 0)
@@ -969,7 +969,7 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 				}
 			}
 
-			scene->objects.push_back(new Mesh(id, scene->materials[matIndex - 1], faces, meshIndices, meshUVs, objTransform, sMode));
+			scene->objects.push_back(new Mesh(id, scene->materials[matIndex - 1], faces, meshIndices, meshUVs, scene->primitives, objTransform, sMode));
 		}
 		break;
 		case FileType::PLY:
@@ -1022,7 +1022,7 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 				}
 			}
 
-			scene->objects.push_back(new Mesh(id, scene->materials[matIndex - 1], faces, meshIndices, meshUVs, objTransform, sMode));
+			scene->objects.push_back(new Mesh(id, scene->materials[matIndex - 1], faces, meshIndices, meshUVs, scene->primitives, objTransform, sMode));
 		}
 		break;
 
@@ -1062,7 +1062,7 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 			}
 		}
 
-		scene->objects.back()->SetMotionBlur(motBlur);
+		scene->objects.back()->SetMotionBlur(motBlur, scene->primitives);
 		scene->objects.back()->SetTextures(colorChanger, normalChanger);
 		meshIndices->erase(meshIndices->begin(), meshIndices->end());
 		meshIndices->clear();
@@ -1121,7 +1121,7 @@ Scene* SceneParser::CreateSceneFromXML(const char* filePath)
 		}
 
 		newMesh->SetTransformation(objTransform);
-		newMesh->SetMotionBlur(motBlur);
+		newMesh->SetMotionBlur(motBlur, scene->primitives);
 
 		scene->objects.push_back(newMesh);
 

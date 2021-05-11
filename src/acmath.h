@@ -986,6 +986,7 @@ public:
     glm::mat4 invTransformationMatrix;
     glm::mat4 transposeMatrix;
 
+    Transform() {}
 
     Transform(glm::mat4& pMatrix)
         : transposeMatrix(pMatrix)
@@ -996,7 +997,6 @@ public:
 
     void UpdateTransform()
     {
-        
         transformationMatrix = glm::transpose(transposeMatrix);
         invTransformationMatrix = glm::inverse(transformationMatrix);
     }

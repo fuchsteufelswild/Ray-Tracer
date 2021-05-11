@@ -26,19 +26,13 @@ using namespace tinyxml2;
 
 namespace actracer {
 
-Scene *Scene::pScene = nullptr; // Initialize with nullptr
 int Primitive::id = 0;
-int Scene::debugBegin = -1;
-int Scene::debugEnd = -1;
-int Scene::debugCurrent = 0;
 
 Scene::Scene()
 {
     tmo = nullptr;
 
     sceneRandom = Random<double>{};
-
-    Scene::pScene = this;
 
     maxRecursionDepth = 0; // Default recursion depth
     shadowRayEps = 0.005;  // Default shadow ray epsilon

@@ -46,14 +46,12 @@ public:
     static int debugEnd;
     static int debugCurrent;
 
-public:
+private:
     unsigned seed;
     std::default_random_engine generator;
     std::uniform_real_distribution<double> distribution;
 
     Random<double> sceneRandom;
-
-    std::vector<Vector3f> inVector;
 
     int maxRecursionDepth; // Maximum recursion depth
     float intTestEps;          // IntersectionTestEpsilon
@@ -78,15 +76,8 @@ public:
 
     std::vector<std::string> imagePaths;
     std::vector<Texture *> textures;
-
-    std::unordered_map<int, Ray> meshRays;
-
-    BVHTree* accelerator;
-
+public:
     Scene();
-    Scene(const char *xmlPath); // Constructor. Parses XML file and initializes vectors above
-
-    void RenderScene(void); // Method to render scene, an image is created for each camera in the scene
 public:
     const std::vector<Camera*>& GetAllCameras() const;
     const std::vector<Primitive*>& GetAllPrimitives() const;
@@ -102,16 +93,7 @@ public:
     Vector3f GetAmbientColor() const;
 
 private:
-    void RenderCam(Camera *cam, Image &img, int iStart, int iEnd);     // Render the scene for camera
-    Color RenderPixel(Ray &ray, float ctw = 0.0f, float rth = 0.0f);   // Calculate the color of a pixel
-    void CalculateLight(Ray &r, Vector3f &outColor, int depth, float columnToWidth = 0.0f, float rowToHeight = 0.0f); // Compute the contribution of the all lights for the given ray
-
-    Color RenderPixel(Camera* cam, int row, int col);
-
-    void ComputeTransformMatrix(const char* str, Transform& tr);
     Shape *GetMeshWithID(int id);
-
-    void ComputeTiltedGlossyReflectionRay(Vector3f &vrd, const Material* intersectionMat); // Get glossy
 };
 
 inline const Tonemapper *Scene::GetTonemapper() const
